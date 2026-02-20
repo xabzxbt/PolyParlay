@@ -80,7 +80,7 @@ export default function ConfirmModal({ isOpen, onClose, legs, stake, combinedOdd
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center font-sans">
-      <div role="presentation" className="absolute inset-0 bg-surface-primary/60 backdrop-blur-sm" onClick={isWorking ? undefined : handleClose} />
+      <div role="presentation" className="absolute inset-0 bg-surface-1/60 backdrop-blur-sm" onClick={isWorking ? undefined : handleClose} />
       <div className="relative bg-surface-1 border border-border-default rounded-modal w-[460px] max-w-[92vw] max-h-[88vh] flex flex-col animate-scale-in shadow-elevated overflow-hidden">
 
         {/* Header */}

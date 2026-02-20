@@ -45,7 +45,7 @@ export default function AdvancedFilters({ filters, onChange, onReset }: Props) {
           "flex items-center gap-1.5 px-3 py-2 rounded-button border text-xs font-medium transition-all whitespace-nowrap",
           open || activeCount > 0
             ? "bg-primary-dim border-primary/20 text-primary"
-            : "bg-surface-2 border-border-default text-text-muted hover:border-border-default-hover"
+            : "bg-surface-2 border-border-default text-text-muted hover:border-border-strong"
         )}>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M1 3H11M3 6H9M5 9H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />

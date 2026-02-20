@@ -16,10 +16,29 @@ const config: Config = {
           hover: "#1A45D6",   // Deep Blue Hover
           active: "#1536A0"
         },
+        // Aliased design tokens used in globals.css component classes
+        "poly-blue": {
+          DEFAULT: "#2E5CFF",
+          hover: "#1A45D6",
+          dim: "rgba(46, 92, 255, 0.1)",
+        },
+        bull: "#10B981",
+        bear: "#EF4444",
+        warn: "#F59E0B",
+        stroke: "#262D3D",
         surface: {
+          0: "#060810", // Deepest background
           1: "#0B0E14", // Dark background
           2: "#151924", // Cards
           3: "#1D2332", // Elevated / Hover States
+          4: "#2A3040", // Extra elevated
+        },
+        // Aliased text tokens for globals.css
+        txt: {
+          primary: "#FFFFFF",
+          secondary: "#94A3B8",
+          muted: "#64748B",
+          disabled: "#334155",
         },
         border: {
           default: "#262D3D", // Border Default
@@ -32,10 +51,10 @@ const config: Config = {
           muted: "#64748B",
           disabled: "#334155"
         },
-        success: "#10B981",
-        warning: "#F59E0B",
-        error: "#EF4444",
-        info: "#3B82F6",
+        success: { DEFAULT: "#10B981", dim: "rgba(16, 185, 129, 0.1)" },
+        warning: { DEFAULT: "#F59E0B", dim: "rgba(245, 158, 11, 0.1)", dark: "#B45309" },
+        error: { DEFAULT: "#EF4444", dim: "rgba(239, 68, 68, 0.1)" },
+        info: { DEFAULT: "#3B82F6", dim: "rgba(59, 130, 246, 0.1)" },
         "polymarket-yes": "#10B981",
         "polymarket-no": "#EF4444"
       },
@@ -64,6 +83,7 @@ const config: Config = {
       },
       boxShadow: {
         card: "0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)",
+        "card-hover": "0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3)",
         elevated: "0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3)",
         glow: "0 0 24px rgba(46, 92, 255, 0.15)",
         "glow-green": "0 0 16px rgba(16, 185, 129, 0.1)",

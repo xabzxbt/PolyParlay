@@ -271,7 +271,7 @@ export default function MyParlaysPage() {
                       return (
                         <div key={leg.id} role="button" tabIndex={0} onClick={() => router.push(`/market/${leg.marketId}`)}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/market/${leg.marketId}`); } }}
-                          className="flex items-center gap-2 p-2.5 bg-surface-2 rounded-button border border-border-default hover:border-border-default-hover cursor-pointer transition-all">
+                          className="flex items-center gap-2 p-2.5 bg-surface-2 rounded-button border border-border-default hover:border-border-strong cursor-pointer transition-all">
                           <span className="w-5 h-5 rounded-pill bg-primary-dim text-primary text-[10px] font-bold flex items-center justify-center shrink-0 font-tabular">{i + 1}</span>
                           <p className="flex-1 text-xs text-text-secondary truncate">{leg.question}</p>
                           <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",

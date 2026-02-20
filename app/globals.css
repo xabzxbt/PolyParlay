@@ -73,7 +73,7 @@
   }
 
   .card-interactive {
-    @apply card card-hover cursor-pointer;
+    @apply bg-surface-2 transition-all duration-200 rounded-card shadow-sm hover:bg-surface-3 hover:shadow-card-hover hover:border-poly-blue/20 cursor-pointer;
   }
 
   /* BUTTONS */

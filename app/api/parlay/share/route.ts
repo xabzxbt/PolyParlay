@@ -30,8 +30,7 @@ export async function POST(request: Request) {
 
     // Save to Supabase if available
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
+      const { supabase } = await import("@/lib/supabase/client");
       await supabase.from("shared_parlays").insert(shareData);
     } catch {
       // Supabase save is non-blocking — share link still works via OG route

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/providers/AuthProvider";
 import { useWalletClient, usePublicClient } from "wagmi";
@@ -33,19 +33,7 @@ export default function BridgeModal({ isOpen, onClose, defaultTab = "deposit" }:
     const [withdrawTx, setWithdrawTx] = useState("");
     const [withdrawError, setWithdrawError] = useState("");
 
-    useEffect(() => {
-        if (isOpen) {
-            setActiveTab(defaultTab);
-            setDepositDetected(false);
-            setWithdrawAmount("");
-            setWithdrawTx("");
-            setWithdrawError("");
-            setWithdrawToAddress("");
-            fetchBalance(true);
-        }
-    }, [isOpen, defaultTab]);
-
-    const fetchBalance = async (setInitial: boolean = false) => {
+    const fetchBalance = useCallback(async (setInitial: boolean = false) => {
         if (!address || !publicClient) return;
         try {
             const balStr = await publicClient.readContract({
@@ -65,7 +53,19 @@ export default function BridgeModal({ isOpen, onClose, defaultTab = "deposit" }:
             }
         } catch (e) {
         }
-    };
+    }, [address, publicClient, initialBalance]);
+
+    useEffect(() => {
+        if (isOpen) {
+            setActiveTab(defaultTab);
+            setDepositDetected(false);
+            setWithdrawAmount("");
+            setWithdrawTx("");
+            setWithdrawError("");
+            setWithdrawToAddress("");
+            fetchBalance(true);
+        }
+    }, [isOpen, defaultTab, fetchBalance]);
 
     // Poll balance every 10s for deposit tab
     useEffect(() => {
@@ -74,7 +74,7 @@ export default function BridgeModal({ isOpen, onClose, defaultTab = "deposit" }:
             fetchBalance(false);
         }, 10000);
         return () => clearInterval(interval);
-    }, [isOpen, activeTab, initialBalance, address, publicClient]);
+    }, [isOpen, activeTab, fetchBalance]);
 
     const handleWithdraw = async () => {
         if (!walletClient || !withdrawToAddress) {

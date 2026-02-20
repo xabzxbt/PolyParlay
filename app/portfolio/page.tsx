@@ -44,7 +44,7 @@ export default function PortfolioPage() {
     const [isBridgeOpen, setIsBridgeOpen] = useState(false);
 
     // Verify on-chain position
-    const verifyOnChainPosition = async (tokenId: string, expectedSize: number) => {
+    const verifyOnChainPosition = useCallback(async (tokenId: string, expectedSize: number) => {
         setVerifyingPosition(true);
         setPositionWarning(null);
         try {
@@ -66,7 +66,7 @@ export default function PortfolioPage() {
         } finally {
             setVerifyingPosition(false);
         }
-    };
+    }, []);
 
     // Call verification when selling position is selected
     useEffect(() => {
@@ -79,7 +79,7 @@ export default function PortfolioPage() {
             setPositionWarning(null);
             setActualOnChainSize(null);
         }
-    }, [sellingToken, sellAmount]);
+    }, [sellingToken, sellAmount, verifyOnChainPosition]);
 
     const tokenIds = useMemo(() =>
         positions?.map((p: any) => p.asset ?? p.tokenId ?? p.token).filter(Boolean) ?? []

@@ -1,0 +1,44 @@
+{
+  "name": "polyparlay",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@polymarket/builder-signing-sdk": "^0.0.8",
+    "@polymarket/clob-client": "^5.2.3",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@reown/appkit": "^1.8.0",
+    "@reown/appkit-adapter-wagmi": "^1.8.0",
+    "@supabase/supabase-js": "^2.97.0",
+    "@tanstack/react-query": "^5.62.0",
+    "@types/node": "^20.11.5",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vercel/og": "^0.8.6",
+    "autoprefixer": "^10.4.18",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.0",
+    "ethers": "^6.16.0",
+    "lucide-react": "^0.344.0",
+    "next": "^14.2.28",
+    "postcss": "^8.4.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.0",
+    "swr": "^2.4.0",
+    "tailwind-merge": "^2.2.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "viem": "^2.21.0",
+    "wagmi": "^2.14.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.3"
+  }
+}

@@ -1,0 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface-0 text-txt-primary font-sans;
+    min-height: 100vh;
+  }
+
+  /* Soft Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-txt-disabled rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-txt-secondary;
+  }
+
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid #2E5CFF;
+    outline-offset: 2px;
+    @apply rounded-sm;
+  }
+
+  ::selection {
+    background: rgba(46, 92, 255, 0.2);
+    color: #2E5CFF;
+  }
+}
+
+@layer components {
+
+  /* CARDS */
+  .card {
+    @apply bg-surface-2 transition-all duration-200 rounded-card shadow-sm;
+  }
+
+  .card-hover {
+    @apply hover:bg-surface-3 hover:shadow-card-hover hover:border-poly-blue/20;
+  }
+
+  .card-interactive {
+    @apply card card-hover cursor-pointer;
+  }
+
+  /* BUTTONS */
+  .btn-yes {
+    @apply bg-transparent text-txt-secondary border border-stroke font-bold text-sm hover:bg-bull hover:text-white hover:border-bull px-4 py-2.5 transition-all duration-200 active:scale-95 rounded-button;
+  }
+
+  .btn-no {
+    @apply bg-transparent text-txt-secondary border border-stroke font-bold text-sm hover:bg-bear hover:text-white hover:border-bear px-4 py-2.5 transition-all duration-200 active:scale-95 rounded-button;
+  }
+
+  .btn-primary {
+    @apply bg-poly-blue text-white font-bold py-3 px-6 shadow-glow hover:bg-poly-blue-hover transition-all duration-200 active:scale-95 rounded-button;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-2 border border-stroke text-txt-secondary hover:bg-surface-3 hover:text-txt-primary hover:border-poly-blue/30 px-4 py-2 font-medium text-sm transition-all duration-200 rounded-button;
+  }
+
+  .btn-ghost {
+    @apply text-txt-secondary hover:text-poly-blue hover:bg-surface-2 px-3 py-2 text-sm font-medium transition-all duration-200 rounded-button;
+  }
+
+  /* PILLS */
+  .pill {
+    @apply px-3 py-1.5 text-xs font-bold border border-stroke text-txt-secondary bg-surface-2 hover:border-poly-blue/30 hover:text-poly-blue transition-all duration-200 cursor-pointer whitespace-nowrap rounded-pill;
+  }
+
+  .pill-active {
+    @apply border-poly-blue/50 text-poly-blue bg-poly-blue/10;
+  }
+
+  /* NAV */
+  .nav-cat {
+    @apply shrink-0 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-txt-muted hover:text-poly-blue hover:bg-poly-blue/10 transition-all duration-200 whitespace-nowrap rounded-button;
+  }
+
+  .nav-cat-active {
+    @apply bg-poly-blue/10 text-poly-blue hover:bg-poly-blue/10 hover:text-poly-blue border-poly-blue/20;
+    border-width: 1px;
+    border-style: solid;
+  }
+
+  .glass {
+    @apply bg-surface-1/90 backdrop-blur-md border border-stroke;
+  }
+
+  .shimmer {
+    @apply bg-gradient-to-r from-surface-2 via-surface-3 to-surface-2 bg-[length:400%_100%] animate-shimmer rounded-card;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .prob-bar {
+    @apply relative h-1 bg-surface-4 overflow-hidden rounded-full;
+  }
+
+  .prob-fill {
+    @apply absolute left-0 top-0 h-full transition-all duration-500 rounded-full;
+  }
+
+  .liq-dot {
+    @apply w-1.5 h-1.5 rounded-full;
+  }
+
+  .liq-high {
+    @apply bg-bull;
+  }
+
+  .liq-mid {
+    @apply bg-warn;
+  }
+
+  .liq-low {
+    @apply bg-bear;
+  }
+
+  /* TICKER */
+  .ticker-wrap {
+    @apply w-full overflow-hidden border-b border-poly-blue/10 bg-poly-blue-dim;
+    height: 24px;
+  }
+
+  .ticker-content {
+    display: inline-flex;
+    white-space: nowrap;
+    animation: ticker 45s linear infinite;
+  }
+
+  @keyframes ticker {
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Removed circular dependency classes: rounded-card, rounded-button, rounded-pill are already available as Tailwind utilities */
+
+  .glow-text {
+    text-shadow: 0 0 8px rgba(46, 92, 255, 0.3);
+  }
+}
+
+@layer utilities {
+  .text-gradient-poly {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #2E5CFF, #4DA6FF);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

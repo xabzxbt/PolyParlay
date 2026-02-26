@@ -168,6 +168,7 @@ export default function FundsModal({
         }
     }, [publicClient, activeAddress, address]);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (isOpen) {
             setActiveTab(defaultTab);
@@ -225,9 +226,11 @@ export default function FundsModal({
         if (!chain) return null;
 
         const addrType = chain.addressType;
-        if (addrType === "evm" && depositAddresses.evm) return depositAddresses.evm.address || depositAddresses.evm;
-        if (addrType === "svm" && depositAddresses.svm) return depositAddresses.svm.address || depositAddresses.svm;
-        if (addrType === "btc" && depositAddresses.btc) return depositAddresses.btc.address || depositAddresses.btc;
+        const extract = (val: string | { address: string } | undefined) =>
+            typeof val === "string" ? val : val?.address ?? null;
+        if (addrType === "evm" && depositAddresses.evm) return extract(depositAddresses.evm);
+        if (addrType === "svm" && depositAddresses.svm) return extract(depositAddresses.svm);
+        if (addrType === "btc" && depositAddresses.btc) return extract(depositAddresses.btc);
 
         // Try string fallback
         if (typeof depositAddresses === "object") {

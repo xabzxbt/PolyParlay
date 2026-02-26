@@ -1,0 +1,27 @@
+name: Daily Parlay Resolution
+
+on:
+  schedule:
+    # Runs every day at 00:05 UTC
+    - cron: "5 0 * * *"
+  workflow_dispatch: # allow manual trigger from the GitHub UI
+
+jobs:
+  resolve:
+    name: Resolve open parlays
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Call /api/cron/resolve
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.NEXT_PUBLIC_BASE_URL }}/api/cron/resolve")
+
+          echo "HTTP status: $STATUS"
+
+          if [ "$STATUS" -ne 200 ]; then
+            echo "::error::CRON endpoint returned HTTP $STATUS"
+            exit 1
+          fi

@@ -1,8 +1,13 @@
 {
-  "crons": [
+  "headers": [
     {
-      "path": "/api/cron/resolve",
-      "schedule": "0 0 * * *"
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
     }
   ]
 }

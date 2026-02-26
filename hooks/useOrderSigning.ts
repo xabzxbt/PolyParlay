@@ -304,16 +304,19 @@ export function useOrderSigning() {
           });
         } else if (signer) {
           const ethersSigner = await signer;
+          if (!ethersSigner) {
+            throw new Error("No signer available");
+          }
 
           // Ethers v6 requires removing EIP712Domain from types before signing
           const typesClone = { ...typedData.types };
-          if (typesClone.EIP712Domain) {
-            delete typesClone.EIP712Domain;
+          if ((typesClone as any).EIP712Domain) {
+            delete (typesClone as any).EIP712Domain;
           }
 
           signature = await ethersSigner.signTypedData(
             typedData.domain,
-            typesClone,
+            typesClone as unknown as Record<string, any[]>,
             typedData.message
           );
         } else {

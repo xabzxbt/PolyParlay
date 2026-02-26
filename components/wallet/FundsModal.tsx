@@ -847,7 +847,7 @@ export default function FundsModal({
                             <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                                 <strong style={{ color: 'var(--text-primary)' }}>Native USDC → USDC.e</strong>
                                 <br />
-                                Swap Polygon Native USDC to Bridged USDC.e via Uniswap V3 (0.05% fee). Then use "Send" tab to fund your trading wallet.
+                                Swap Polygon Native USDC to Bridged USDC.e via Uniswap V3 (0.05% fee). Then use the &quot;Send&quot; tab to fund your trading wallet.
                             </div>
                         </div>
 

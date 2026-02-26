@@ -57,6 +57,8 @@ export default function ConfirmModal({ isOpen, onClose, legs, stake, combinedOdd
     } else if (result.error === "insufficient_funds") {
       onClose();
       onInsufficientFunds?.(result.required, result.available);
+    } else if (result.error) {
+      toast("error", result.error);
     }
   };
 
@@ -292,7 +294,7 @@ export default function ConfirmModal({ isOpen, onClose, legs, stake, combinedOdd
 
           {/* CTA */}
           {isDone ? (
-            <button onClick={handleClose} className="w-full bg-primary text-text-primary px-4 py-2 rounded-button font-medium hover:bg-primary-hover shadow-sm transition-colors text-sm py-3.5 flex items-center justify-center gap-2 shadow-glow">
+            <button onClick={handleClose} className="w-full bg-primary text-white px-4 py-2 rounded-button font-medium hover:bg-primary-hover shadow-sm transition-colors text-sm py-3.5 flex items-center justify-center gap-2 shadow-glow">
               <CheckCircle2 size={16} /> Done — Close Window
             </button>
           ) : (
@@ -301,7 +303,7 @@ export default function ConfirmModal({ isOpen, onClose, legs, stake, combinedOdd
                 onClick={isError ? handleRetry : handleConfirm}
                 disabled={isWorking}
                 className={cn(
-                  "w-full bg-primary text-text-primary px-4 py-2 rounded-button font-medium hover:bg-primary-hover shadow-sm transition-colors text-sm py-3.5 flex items-center justify-center gap-2 transition-all",
+                  "w-full bg-primary text-white px-4 py-2 rounded-button font-medium hover:bg-primary-hover shadow-sm transition-colors text-sm py-3.5 flex items-center justify-center gap-2 transition-all",
                   (isWorking || !hasCredentials) && "opacity-50 cursor-not-allowed shadow-none grayscale"
                 )}>
                 {isDerivingKey ? (

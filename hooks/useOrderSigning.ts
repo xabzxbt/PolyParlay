@@ -39,7 +39,7 @@ export function useOrderSigning() {
   const publicClient = usePublicClient({ chainId: POLYGON_CHAIN_ID });
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
-  const { address, isConnected } = useAuth();
+  const { address, isConnected, signer } = useAuth();
   const { credentials: userCredentials, proxyWallet } = usePolymarketAuth();
   const { checkAllowances, approveAll } = useUsdcApproval();
 
@@ -136,8 +136,8 @@ export function useOrderSigning() {
       return { success: false, error: "Wallet not connected" };
     }
 
-    if (!walletClient) {
-      return { success: false, error: "Wallet signer not ready" };
+    if (!walletClient && !signer) {
+      return { success: false, error: "Wallet signer not ready. Try reconnecting." };
     }
 
     // Перевірка user credentials
@@ -294,12 +294,31 @@ export function useOrderSigning() {
         // Wrong negRisk = wrong verifyingContract = invalid signature!
         const typedData = getOrderTypedData(order, negRisk);
 
-        const signature = await walletClient.signTypedData({
-          domain: typedData.domain,
-          types: typedData.types,
-          primaryType: typedData.primaryType,
-          message: typedData.message,
-        });
+        let signature: string;
+        if (walletClient) {
+          signature = await walletClient.signTypedData({
+            domain: typedData.domain,
+            types: typedData.types,
+            primaryType: typedData.primaryType,
+            message: typedData.message,
+          });
+        } else if (signer) {
+          const ethersSigner = await signer;
+
+          // Ethers v6 requires removing EIP712Domain from types before signing
+          const typesClone = { ...typedData.types };
+          if (typesClone.EIP712Domain) {
+            delete typesClone.EIP712Domain;
+          }
+
+          signature = await ethersSigner.signTypedData(
+            typedData.domain,
+            typesClone,
+            typedData.message
+          );
+        } else {
+          throw new Error("No signer available");
+        }
 
         const signedOrder: SignedOrder = { ...order, signature: signature as `0x${string}` };
 
@@ -407,7 +426,7 @@ export function useOrderSigning() {
       setError("Network error");
       return { success: false, error: "Network error" };
     }
-  }, [walletClient, address, isConnected, readUsdcBalance, chainId, switchChainAsync, proxyWallet, userCredentials, checkAllowances, approveAll]);
+  }, [walletClient, signer, address, isConnected, readUsdcBalance, chainId, switchChainAsync, proxyWallet, userCredentials, checkAllowances, approveAll]);
 
   const reset = useCallback(() => {
     setPhase("idle");

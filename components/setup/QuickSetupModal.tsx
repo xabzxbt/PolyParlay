@@ -51,7 +51,7 @@ export default function QuickSetupModal() {
     // Check localStorage SYNCHRONOUSLY to avoid race with usePolymarketAuth's async useEffect
     useEffect(() => {
         if (isConnected && address && !hasRun) {
-            const storedCreds = localStorage.getItem(`polymarket_creds_${address.toLowerCase()}`);
+            const storedCreds = localStorage.getItem(`polymarket_creds_${address}`);
             if (storedCreds) {
                 return;
             }

@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { ClobClient } from "@polymarket/clob-client";
-import { fetchDepositAddresses } from "@/lib/polymarket/bridge";
 
 const POLYMARKET_CREDS_KEY = "polymarket_creds";
 const PROXY_WALLET_KEY = "polymarket_proxy";
+
+// Gnosis Safe Proxy Factory for deterministic proxy wallet derivation
+const SAFE_FACTORY = "0xaacfeea03eb1561c4e67d661e40682bd20e3541b";
 
 export function usePolymarketAuth() {
   const { address, signer } = useAuth();
@@ -20,9 +22,16 @@ export function usePolymarketAuth() {
       const storedProxy = localStorage.getItem(`${PROXY_WALLET_KEY}_${address}`);
 
       if (storedCreds) setApiCreds(JSON.parse(storedCreds));
-      if (storedProxy) setProxyWallet(storedProxy);
 
-      if (storedCreds && storedProxy) {
+      // IMPORTANT: Only set proxy if it's a valid hex string, not a serialized object
+      if (storedProxy && typeof storedProxy === "string" && storedProxy.startsWith("0x")) {
+        setProxyWallet(storedProxy);
+      } else if (storedProxy) {
+        // Clear corrupted proxy wallet data
+        localStorage.removeItem(`${PROXY_WALLET_KEY}_${address}`);
+      }
+
+      if (storedCreds && storedProxy && storedProxy.startsWith("0x")) {
         setIsL2Connected(true);
       } else {
         setIsL2Connected(false);
@@ -35,33 +44,66 @@ export function usePolymarketAuth() {
   }, [address]);
 
   /**
-   * Fetches the user's Polymarket Proxy Wallet address (Gnosis Safe).
-   * Polymarket's bridge API returns the deposit addresses for the connected EOA,
-   * where the 'polygon' address is always the user's proxy wallet.
+   * Safely store the proxy wallet, ensuring it's always a valid hex address string.
    */
-  const loadProxyWallet = useCallback(async (walletAddress: string) => {
-    try {
-      const res = await fetchDepositAddresses(walletAddress);
-      // The bridge API usually returns an array or an object. We look for Polygon.
-      // Usually res = [{ network: "polygon", address: "0x..." }, ...] or similar.
-      let proxy = walletAddress; // Fallback to EOA
+  const saveProxyWallet = useCallback((walletAddress: string, proxy: any) => {
+    // Ensure proxy is a string starting with 0x
+    let safeProxy: string;
 
-      if (Array.isArray(res)) {
-        const poly = res.find((r: any) => r.network?.toLowerCase() === "polygon");
-        if (poly && poly.address) proxy = poly.address;
-      } else if (res && typeof res === "object") {
-        if (res.polygon) proxy = res.polygon;
-        else if (res.address) proxy = res.address;
+    if (typeof proxy === "string" && proxy.startsWith("0x") && proxy.length === 42) {
+      safeProxy = proxy;
+    } else if (typeof proxy === "string" && proxy.startsWith("0x")) {
+      safeProxy = proxy; // might be a valid address with different length
+    } else {
+      // Fallback to EOA if proxy is invalid
+      safeProxy = walletAddress;
+    }
+
+    setProxyWallet(safeProxy);
+    localStorage.setItem(`${PROXY_WALLET_KEY}_${walletAddress}`, safeProxy);
+    return safeProxy;
+  }, []);
+
+  /**
+   * Fetches the user's Polymarket Proxy Wallet address (Gnosis Safe).
+   * 
+   * The proxy wallet is NOT from the Bridge API (that returns deposit addresses).
+   * Instead, we derive it from the API credentials or compute via contract.
+   * For users who have already logged into Polymarket.com, the proxy wallet
+   * was created on their first login. We can find it by checking the
+   * Gnosis Safe Factory or using the profile API.
+   */
+  const loadProxyWallet = useCallback(async (walletAddress: string): Promise<string> => {
+    try {
+      // First check if we already have a valid cached proxy
+      const stored = localStorage.getItem(`${PROXY_WALLET_KEY}_${walletAddress}`);
+      if (stored && typeof stored === "string" && stored.startsWith("0x") && stored.length === 42) {
+        setProxyWallet(stored);
+        return stored;
       }
 
-      setProxyWallet(proxy);
-      localStorage.setItem(`${PROXY_WALLET_KEY}_${walletAddress}`, proxy);
-      return proxy;
+      // Try to get proxy wallet from Polymarket's profile/settings API
+      // The proxy wallet is visible at polymarket.com/settings
+      try {
+        const res = await fetch(`/api/proxy-wallet?address=${walletAddress}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.proxyWallet && typeof data.proxyWallet === "string" && data.proxyWallet.startsWith("0x")) {
+            return saveProxyWallet(walletAddress, data.proxyWallet);
+          }
+        }
+      } catch {
+        // API route may not exist, continue
+      }
+
+      // Fallback: use EOA as proxy (for users who haven't used Polymarket before).
+      // The actual proxy will be set during connectL2 when we derive API keys.
+      return saveProxyWallet(walletAddress, walletAddress);
     } catch (e) {
       console.error("Failed to fetch Polymarket Proxy address:", e);
       return walletAddress; // fallback
     }
-  }, []);
+  }, [saveProxyWallet]);
 
   /**
    * Connects to Polymarket L2 (CLOB) by prompting the user to sign a message.

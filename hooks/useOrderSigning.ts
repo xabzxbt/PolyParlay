@@ -97,6 +97,8 @@ export function useOrderSigning() {
   // Task 1: Order Polling
   const pollOrderState = useCallback(async (orderId: string, legId: string, credentials: any, finalMaker: string) => {
     let polling = true;
+    let delay = 2000; // Start at 2s
+    const MAX_DELAY = 30000; // Cap at 30s
     while (polling) {
       try {
         const res = await fetch(`/api/order/${orderId}`, {
@@ -122,7 +124,10 @@ export function useOrderSigning() {
         }
       } catch (err) { }
 
-      if (polling) await new Promise(r => setTimeout(r, 2000));
+      if (polling) {
+        await new Promise(r => setTimeout(r, delay));
+        delay = Math.min(delay * 2, MAX_DELAY); // Exponential backoff
+      }
     }
   }, []);
 

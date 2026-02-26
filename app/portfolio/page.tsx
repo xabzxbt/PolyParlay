@@ -10,7 +10,7 @@ import { useSellPosition } from "@/hooks/useSellPosition";
 import { usePolymarketAuth } from "@/hooks/usePolymarketAuth";
 import { useRedeem } from "@/hooks/useRedeem";
 import { useAuth } from "@/providers/AuthProvider";
-import BridgeModal from "@/components/wallet/BridgeModal";
+import FundsModal from "@/components/wallet/FundsModal";
 
 export default function PortfolioPage() {
     const { positions, orders, loading, error, refresh, isEnabled } = usePortfolio();
@@ -232,6 +232,7 @@ export default function PortfolioPage() {
             tokenId: sellingToken,
             shares: parseFloat(sellAmount),
             pricePerShare: price, // Limit price
+            proxyWallet, // Pass proxy wallet so SELL orders use correct maker
             orderType: "GTC", // Good Til Cancelled
         });
 
@@ -649,7 +650,7 @@ export default function PortfolioPage() {
                 </div>
             )}
 
-            <BridgeModal isOpen={isBridgeOpen} onClose={() => setIsBridgeOpen(false)} />
+            <FundsModal isOpen={isBridgeOpen} onClose={() => setIsBridgeOpen(false)} />
         </div>
     );
 }

@@ -6,7 +6,7 @@ import ConnectButton from "@/components/auth/ConnectButton";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Menu, X, Ticket, ShoppingBag, TrendingUp, HelpCircle, LayoutDashboard, Star, Settings, RefreshCw } from "lucide-react";
-import BridgeModal from "@/components/wallet/BridgeModal";
+import FundsModal from "@/components/wallet/FundsModal";
 import SettingsModal from "@/components/settings/SettingsModal";
 
 const NAV = [
@@ -130,7 +130,7 @@ export default function Header() {
       </div>
 
       {isSettingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
-      {isBridgeOpen && <BridgeModal isOpen={isBridgeOpen} onClose={() => setBridgeOpen(false)} />}
+      {isBridgeOpen && <FundsModal isOpen={isBridgeOpen} onClose={() => setBridgeOpen(false)} />}
 
       {/* Mobile menu */}
       {mobileMenu && (

@@ -73,7 +73,7 @@ export async function POST(request: Request) {
                 signatureType: signedOrder.signatureType,
                 signature: signedOrder.signature,
             },
-            owner: userCredentials.apiKey,
+            owner: userCredentials.address,
             orderType,
         };
 

@@ -4,6 +4,7 @@ import { useWalletClient, usePublicClient } from "wagmi";
 import { ConditionalTokensABI } from "@/lib/abis/ConditionalTokens";
 import { CONTRACTS } from "@/lib/polymarket/order-builder";
 import { useAuth } from "@/providers/AuthProvider";
+import { usePolymarketAuth } from "@/hooks/usePolymarketAuth";
 
 interface RedeemResult {
     success: boolean;
@@ -15,12 +16,37 @@ export function useRedeem() {
     const { data: walletClient } = useWalletClient();
     const publicClient = usePublicClient();
     const { address } = useAuth();
+    const { proxyWallet } = usePolymarketAuth();
     const [loading, setLoading] = useState(false);
     const [checkingPayout, setCheckingPayout] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     /**
+     * Check if a market has been resolved by reading payoutDenominator.
+     * A non-zero denominator means the market is resolved.
+     */
+    const isMarketResolved = useCallback(async (
+        conditionId: string
+    ): Promise<boolean> => {
+        if (!publicClient) return false;
+
+        try {
+            const denominator = await publicClient.readContract({
+                address: CONTRACTS.conditionalTokens,
+                abi: ConditionalTokensABI,
+                functionName: "payoutDenominator",
+                args: [conditionId as `0x${string}`],
+            }) as bigint;
+
+            return denominator > 0n;
+        } catch {
+            return false;
+        }
+    }, [publicClient]);
+
+    /**
      * Get payout numerators for each outcome to determine winning outcome(s).
+     * Uses the correct CTF function: payoutNumerators(bytes32 conditionId, uint256 index)
      * Returns array where index 0 = YES outcome, index 1 = NO outcome.
      */
     const getPayoutNumerators = useCallback(async (
@@ -31,32 +57,25 @@ export function useRedeem() {
         }
 
         try {
-            const collateralToken = CONTRACTS.collateral;
-            const parentCollectionId = "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-            // Get payout for outcome 0 (YES) - indexSet [1] in binary
+            // Read payout for outcome 0 (YES)
             const payout0 = await publicClient.readContract({
                 address: CONTRACTS.conditionalTokens,
                 abi: ConditionalTokensABI,
-                functionName: "getPayoutNumerator",
+                functionName: "payoutNumerators",
                 args: [
-                    collateralToken,
-                    parentCollectionId as `0x${string}`,
                     conditionId as `0x${string}`,
-                    [0n] // payoutIndices for outcome 0
+                    0n
                 ],
             }) as bigint;
 
-            // Get payout for outcome 1 (NO) - indexSet [2] in binary
+            // Read payout for outcome 1 (NO)
             const payout1 = await publicClient.readContract({
                 address: CONTRACTS.conditionalTokens,
                 abi: ConditionalTokensABI,
-                functionName: "getPayoutNumerator",
+                functionName: "payoutNumerators",
                 args: [
-                    collateralToken,
-                    parentCollectionId as `0x${string}`,
                     conditionId as `0x${string}`,
-                    [1n] // payoutIndices for outcome 1
+                    1n
                 ],
             }) as bigint;
 
@@ -104,7 +123,10 @@ export function useRedeem() {
     /**
      * Redeem winning positions from the Conditional Tokens contract.
      * Automatically determines winning outcome(s) before redemption.
-     * Note: This currently supports EOA redemption. Proxy redemption requires Gnosis Safe execution.
+     * 
+     * IMPORTANT: If the user has a proxy wallet (Safe), positions live in the proxy,
+     * not in the EOA. Direct writeContract from EOA will NOT redeem proxy positions.
+     * Proxy users should redeem via polymarket.com or the Relayer Client.
      */
     const redeem = useCallback(async (
         conditionId: string,
@@ -114,11 +136,29 @@ export function useRedeem() {
             return { success: false, error: "Wallet not connected" };
         }
 
+        // Check if user is using a proxy wallet
+        const isProxyUser = proxyWallet && proxyWallet.toLowerCase() !== address.toLowerCase();
+
+        if (isProxyUser) {
+            return {
+                success: false,
+                error: "Your positions are in your Polymarket proxy wallet. Please redeem at polymarket.com/portfolio or wait for automatic redemption."
+            };
+        }
+
         setLoading(true);
         setCheckingPayout(true);
         setError(null);
 
         try {
+            // Check if market is actually resolved
+            const resolved = await isMarketResolved(conditionId);
+            if (!resolved) {
+                setLoading(false);
+                setCheckingPayout(false);
+                return { success: false, error: "Market has not been resolved yet" };
+            }
+
             // Determine which outcomes to redeem
             let winningIndexSets: number[];
 
@@ -149,7 +189,6 @@ export function useRedeem() {
                 chain: walletClient.chain,
             });
 
-
             // Wait for receipt
             if (publicClient) {
                 await publicClient.waitForTransactionReceipt({ hash });
@@ -165,7 +204,7 @@ export function useRedeem() {
             setCheckingPayout(false);
             return { success: false, error: msg };
         }
-    }, [walletClient, address, publicClient, determineWinningIndexSets]);
+    }, [walletClient, address, publicClient, proxyWallet, determineWinningIndexSets, isMarketResolved]);
 
     return {
         redeem,

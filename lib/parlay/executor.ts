@@ -111,7 +111,7 @@ async function submitOrderToCLOB(
       signatureType: order.signatureType,
       signature: order.signature,
     },
-    owner: userCredentials.apiKey,
+    owner: userCredentials.address,
     orderType: "GTC",
   };
 

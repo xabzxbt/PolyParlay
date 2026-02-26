@@ -3,7 +3,7 @@ import { useParlay } from "@/providers/ParlayProvider";
 import { cn, formatPrice, formatUSD, formatOdds, formatROI, formatPercent } from "@/lib/utils";
 import { getCorrelationWarnings, checkLiquidity } from "@/lib/parlay/calculator";
 import ConfirmModal from "@/components/parlay/ConfirmModal";
-import BridgeModal from "@/components/wallet/BridgeModal";
+import FundsModal from "@/components/wallet/FundsModal";
 import { useShareParlay } from "@/hooks/useShare";
 import { useToast } from "@/providers/ToastProvider";
 import { useState } from "react";
@@ -423,7 +423,7 @@ export default function ParlaySlip() {
         )}
       </div>
 
-      {showBridge && <BridgeModal isOpen={showBridge} onClose={() => setShowBridge(false)} defaultTab="deposit" />}
+      {showBridge && <FundsModal isOpen={showBridge} onClose={() => setShowBridge(false)} defaultTab="deposit" />}
 
       <ConfirmModal
         isOpen={showConfirm}

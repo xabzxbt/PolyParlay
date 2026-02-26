@@ -1,19 +1,41 @@
 "use client";
-import { cn } from "@/lib/utils";
 import type { QualityResult } from "@/lib/quality-score";
+import { ShieldCheck, AlertCircle, Skull } from "lucide-react";
 
 interface QualityBadgeProps {
   quality: QualityResult;
   showScore?: boolean;
 }
 
-import { ShieldCheck, AlertCircle, Skull } from "lucide-react";
-
 const TIER_CONFIG = {
-  high: { label: "High Quality", Icon: ShieldCheck, color: "text-[#2E5CFF] bg-[#2E5CFF]/10 border-[#2E5CFF]/20" },
-  mid: { label: "Medium", Icon: AlertCircle, color: "text-yellow-500 bg-yellow-500/10 border-yellow-500/20" },
-  low: { label: "Low", Icon: AlertCircle, color: "text-orange-500 bg-orange-500/10 border-orange-500/20" },
-  dead: { label: "Dead", Icon: Skull, color: "text-text-muted bg-surface-3 border-border-default" },
+  high: {
+    label: "High Quality",
+    Icon: ShieldCheck,
+    bg: 'rgba(184,150,90,0.1)',
+    border: 'rgba(184,150,90,0.25)',
+    color: 'var(--accent-gold)',
+  },
+  mid: {
+    label: "Medium",
+    Icon: AlertCircle,
+    bg: 'rgba(184,150,90,0.06)',
+    border: 'rgba(184,150,90,0.15)',
+    color: 'var(--accent-gold)',
+  },
+  low: {
+    label: "Low",
+    Icon: AlertCircle,
+    bg: 'rgba(139,74,74,0.06)',
+    border: 'rgba(139,74,74,0.15)',
+    color: 'var(--accent-red)',
+  },
+  dead: {
+    label: "Dead",
+    Icon: Skull,
+    bg: 'var(--bg-elevated)',
+    border: 'var(--border-subtle)',
+    color: 'var(--text-muted)',
+  },
 };
 
 export default function QualityBadge({ quality, showScore = false }: QualityBadgeProps) {
@@ -21,10 +43,15 @@ export default function QualityBadge({ quality, showScore = false }: QualityBadg
 
   return (
     <span
-      className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-pill border text-[10px] font-bold uppercase tracking-wide", cfg.color)}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold uppercase tracking-wide"
+      style={{
+        backgroundColor: cfg.bg,
+        borderColor: cfg.border,
+        color: cfg.color,
+      }}
       title={`Quality: ${quality.score}/100`}
     >
-      <cfg.Icon size={12} strokeWidth={2.5} />
+      <cfg.Icon size={11} strokeWidth={2} />
       {showScore ? quality.score : cfg.label}
     </span>
   );

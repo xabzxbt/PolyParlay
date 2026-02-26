@@ -164,7 +164,7 @@ export default function QuickSetupModal() {
                 creating_api: "📝 Please sign the message in your wallet...",
             }));
 
-            const success = await deriveAPIKey(0);
+            const success = await deriveAPIKey();
 
             if (!success) {
                 throw new Error(authError || "Failed to create API credentials. Please try again.");

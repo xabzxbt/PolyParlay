@@ -11,7 +11,25 @@ import { useEvents, useSubTags } from "@/hooks/useMarketData";
 import { MAIN_CATEGORIES } from "@/lib/polymarket/categories";
 import { filterEvents, filterFlatMarkets, isActiveMarket, DEFAULT_FILTERS, type FilterState } from "@/lib/filters";
 import { cn, formatVolume } from "@/lib/utils";
-import { Search, ArrowRight, Rocket } from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
+
+// Inline SVG flame icon (stroke-based, no fill) — replaces 🔥 emoji
+function FlameIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z" />
+    </svg>
+  );
+}
 
 export default function HomePage() {
   const { state, setSlipOpen } = useParlay();
@@ -21,7 +39,7 @@ export default function HomePage() {
   const [activeSubTagId, setActiveSubTagId] = useState("");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("volume24hr");
-  const [activeOnly, setActiveOnly] = useState(true);
+  const [activeOnly, setActiveOnly] = useState(false);
 
   // === NEW Phase 1 state ===
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
@@ -91,114 +109,226 @@ export default function HomePage() {
   const hasLegs = state.legs.length > 0;
 
   return (
-    <div className="flex min-h-[calc(100vh-56px)]">
-      {/* Main content — shift left when slip is open */}
+    <div className="flex min-h-[calc(100vh-56px)]" style={{ backgroundColor: 'var(--bg-base)' }}>
+      {/* Main content */}
       <div className={cn("flex-1 transition-all duration-300 min-w-0", hasLegs && "lg:pr-[340px]")}>
 
-        {/* Hero section: betting-focused */}
-        <section className="border-b border-border-default bg-surface-1 shadow-sm z-10 relative">
+        {/* Stats bar */}
+        <section
+          className="z-10 relative"
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}
+        >
           <div className="max-w-container mx-auto px-4 py-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  {/* Badge removed */}
-                </div>
-                <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
-                <PlatformStats stats={stats} />
-              </div>
+              <PlatformStats stats={stats} />
             </div>
           </div>
         </section>
 
-        {/* Featured Markets — high volume, high liquidity highlights */}
+        {/* HOT RIGHT NOW strip (Phase 3.3) */}
         {!search && category === "trending" && activeFlatMarkets.length > 0 && (
-          <section className="border-b border-border-default bg-surface-1/50 py-4">
+          <section
+            className="py-5"
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              borderBottom: '1px solid var(--border-subtle)',
+            }}
+          >
             <div className="max-w-container mx-auto px-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[11px] font-bold text-error uppercase tracking-wider flex items-center gap-1">
-                  🔥 Hot Right Now
+              {/* Section header */}
+              <div className="flex items-center gap-2 mb-4">
+                <span
+                  className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest"
+                  style={{ color: 'var(--accent-mocha)' }}
+                >
+                  <FlameIcon size={13} />
+                  Hot Right Now
                 </span>
+                <span
+                  className="flex-1 h-px"
+                  style={{ backgroundColor: 'var(--border-subtle)' }}
+                />
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                {activeFlatMarkets
-                  .sort((a: any, b: any) => (b.volume24hr || 0) - (a.volume24hr || 0))
-                  .slice(0, 6)
-                  .map((m: any) => {
-                    const yp = Math.round((m.yesPrice || 0.5) * 100);
-                    // Shorten title
-                    const title = m.groupItemTitle || m.question || "Unknown Market";
-                    const shortTitle = title.length > 25 ? title.substring(0, 25) + "..." : title;
 
-                    return (
-                      <a key={m.id} href={`/market/${m.id}`}
-                        className="shrink-0 w-[140px] flex flex-col items-center justify-center p-3 rounded-card bg-surface-2 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group border border-border-default/50">
+              {/* Horizontal scroll with shadow fade on edges */}
+              <div className="relative">
+                {/* Left shadow fade */}
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-6 z-10 pointer-events-none"
+                  style={{ background: 'linear-gradient(to right, var(--bg-surface), transparent)' }}
+                />
+                {/* Right shadow fade */}
+                <div
+                  className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+                  style={{ background: 'linear-gradient(to left, var(--bg-surface), transparent)' }}
+                />
 
-                        {/* Big Percentage */}
-                        <span className={cn(
-                          "text-3xl font-black mb-1 leading-none",
-                          yp >= 50 ? "text-success" : "text-error"
-                        )}>
-                          {yp}%
-                        </span>
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                  {activeFlatMarkets
+                    .sort((a: any, b: any) => (b.volume24hr || 0) - (a.volume24hr || 0))
+                    .slice(0, 8)
+                    .map((m: any) => {
+                      const yp = Math.round((m.yesPrice || 0.5) * 100);
+                      const title = m.groupItemTitle || m.question || "Unknown Market";
+                      const shortTitle = title.length > 28 ? title.substring(0, 28) + "…" : title;
 
-                        {/* Short Title */}
-                        <p className="text-[11px] font-bold text-center leading-tight text-text-primary mb-1 line-clamp-2 h-[2.5em] flex items-center justify-center">
-                          {shortTitle}
-                        </p>
+                      return (
+                        <a
+                          key={m.id}
+                          href={`/market/${m.id}`}
+                          className="shrink-0 w-[130px] flex flex-col items-center justify-center p-3 rounded-xl transition-all group"
+                          style={{
+                            backgroundColor: 'var(--bg-base)',
+                            border: '1px solid var(--border-subtle)',
+                            boxShadow: 'var(--shadow-card)',
+                          }}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                            (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-hover)';
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                            (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)';
+                          }}
+                        >
+                          {/* Big percentage */}
+                          <span
+                            className="font-black mb-1.5 leading-none"
+                            style={{
+                              fontFamily: 'var(--font-mono)',
+                              fontSize: '28px',
+                              color: yp >= 50 ? 'var(--accent-green)' : 'var(--accent-red)',
+                            }}
+                          >
+                            {yp}%
+                          </span>
 
-                        {/* Volume */}
-                        <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider bg-white/50 px-1.5 py-0.5 rounded-pill">
-                          ${formatVolume(m.volume24hr)} Vol
-                        </span>
-                      </a>
-                    );
-                  })}
+                          {/* Short title */}
+                          <p
+                            className="text-[10px] font-medium text-center leading-tight line-clamp-2 mb-2"
+                            style={{ color: 'var(--text-secondary)', height: '2.4em' }}
+                          >
+                            {shortTitle}
+                          </p>
+
+                          {/* Volume pill */}
+                          <span
+                            className="text-[9px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                            style={{
+                              backgroundColor: 'var(--bg-elevated)',
+                              border: '1px solid var(--border-subtle)',
+                              color: 'var(--text-muted)',
+                              fontFamily: 'var(--font-mono)',
+                            }}
+                          >
+                            ${formatVolume(m.volume24hr)} vol
+                          </span>
+                        </a>
+                      );
+                    })}
+                </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* Content */}
-        <section className="max-w-container mx-auto px-4 py-4">
-          {/* Movers bar — price movers */}
-          {!search && activeFlatMarkets.length > 0 && (
-            <div className="mb-6 p-6 rounded-card relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary-hover opacity-100 shadow-xl shadow-primary/20" />
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-pill -translate-y-1/2 translate-x-1/2 blur-2xl" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-pill translate-y-1/2 -translate-x-1/2 blur-xl" />
+        {/* Main content section */}
+        <section className="max-w-container mx-auto px-4 py-6">
 
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="text-white flex-1">
-                  <h3 className="text-xl font-bold flex items-center gap-2 mb-2">
-                    <Rocket size={24} className="text-white" />
+          {/* Welcome hero — editorial style */}
+          {!search && activeFlatMarkets.length > 0 && (
+            <div
+              className="mb-6 p-6 rounded-2xl relative overflow-hidden"
+              style={{
+                backgroundColor: 'var(--bg-dark)',
+                border: '1px solid rgba(245,242,238,0.08)',
+              }}
+            >
+              {/* Subtle decorative texture */}
+              <div
+                className="absolute top-0 right-0 w-72 h-72 rounded-full pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle, rgba(156,123,94,0.15) 0%, transparent 70%)',
+                  transform: 'translate(40%, -40%)',
+                }}
+              />
+              <div
+                className="absolute bottom-0 left-0 w-48 h-48 rounded-full pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle, rgba(184,150,90,0.1) 0%, transparent 70%)',
+                  transform: 'translate(-40%, 40%)',
+                }}
+              />
+
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="flex-1">
+                  <h3
+                    className="text-2xl mb-2"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      color: 'var(--text-inverse)',
+                      lineHeight: 1.3,
+                    }}
+                  >
                     Welcome to PolyParlay
                   </h3>
-                  <p className="text-sm text-white/90 leading-relaxed font-medium">
-                    The advanced precision trading interface for Polymarket.
-                    Built for serious traders, featuring real-time &quot;Smart Money&quot; analytics, whale watching, and Multi-Leg Parlay betting.
+                  <p
+                    className="text-sm leading-relaxed mb-4 max-w-md"
+                    style={{ color: 'rgba(245,242,238,0.65)' }}
+                  >
+                    The precision trading interface for Polymarket. Featuring
+                    real-time Smart Money analytics, whale watching, and Multi-Leg Parlay betting.
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded border border-white/20">DeFi Architecture</span>
-                    <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded border border-white/20">Bayesian Models</span>
-                    <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded border border-white/20">Non-Custodial</span>
+                  <div className="flex flex-wrap gap-2">
+                    {["DeFi Architecture", "Bayesian Models", "Non-Custodial"].map(tag => (
+                      <span
+                        key={tag}
+                        className="text-[10px] font-medium px-2.5 py-1 rounded-md"
+                        style={{
+                          backgroundColor: 'rgba(245,242,238,0.08)',
+                          border: '1px solid rgba(245,242,238,0.12)',
+                          color: 'rgba(245,242,238,0.6)',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
+
                 <div className="flex flex-col items-center gap-2 shrink-0">
-                  <a href="https://polymarket.com/?via=xabzxbt"
+                  <a
+                    href="https://polymarket.com/?via=xabzxbt"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-3 bg-white text-primary text-sm font-bold uppercase tracking-wider rounded-lg shadow-lg hover:bg-surface-1 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 group/btn">
+                    className="px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 group/btn transition-all"
+                    style={{
+                      backgroundColor: 'var(--accent-mocha)',
+                      color: 'var(--text-inverse)',
+                      boxShadow: 'var(--shadow-mocha)',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-mocha-hover)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-mocha)'; }}
+                  >
                     Trade & Support Devs
-                    <ArrowRight size={16} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                    <ArrowRight size={15} className="group-hover/btn:translate-x-0.5 transition-transform" />
                   </a>
-                  <span className="text-[10px] text-white/70">Support free tools by trading</span>
+                  <span
+                    className="text-[10px]"
+                    style={{ color: 'rgba(245,242,238,0.35)' }}
+                  >
+                    Support free tools by trading
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Filters — EXTENDED with new props */}
+          {/* Filters */}
           <MarketFilters
             activeCategory={category}
             onCategoryChange={handleCategoryChange}
@@ -213,7 +343,6 @@ export default function HomePage() {
             activeOnly={activeOnly}
             onActiveOnlyChange={setActiveOnly}
             resultCount={totalMarkets}
-            // NEW Phase 1 props
             advancedFilters={fullFilters}
             onAdvancedFilterChange={handleAdvancedFilterChange}
             onAdvancedFilterReset={handleAdvancedFilterReset}
@@ -221,18 +350,17 @@ export default function HomePage() {
             onViewModeChange={setViewMode}
           />
 
-          {/* Content grid — UPDATED with view toggle */}
-          <div className="mt-4">
+          {/* Staggered card grid */}
+          <div className="mt-5">
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {Array.from({ length: 9 }).map((_, i) => (
                   <div key={i} className="shimmer h-[220px]" />
                 ))}
               </div>
             ) : viewMode === "grouped" ? (
-              // === GROUPED VIEW (default, existing EventCard) ===
               filteredEvents.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredEvents.map((ev: any) => (
                     <EventCard key={ev.id} event={ev} />
                   ))}
@@ -241,9 +369,8 @@ export default function HomePage() {
                 <EmptyState search={search} activeOnly={activeOnly} onShowSettled={() => setActiveOnly(false)} />
               )
             ) : (
-              // === FLAT VIEW (new, MarketCard grid) ===
               filteredFlatMarkets.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredFlatMarkets.map((m: any) => (
                     <MarketCard key={m.id} market={m} />
                   ))}
@@ -256,27 +383,48 @@ export default function HomePage() {
         </section>
       </div>
 
-      {/* Desktop parlay slip — EXISTING */}
-      <aside className={cn(
-        "hidden lg:flex fixed right-0 top-14 bottom-0 w-[340px] flex-col border-l border-border-default bg-surface-1 z-40 transition-transform duration-300",
-        !hasLegs && "translate-x-full"
-      )}>
+      {/* Desktop parlay slip */}
+      <aside
+        className={cn(
+          "hidden lg:flex fixed right-0 top-14 bottom-0 w-[340px] flex-col z-40 transition-transform duration-300",
+          !hasLegs && "translate-x-full"
+        )}
+        style={{
+          backgroundColor: 'var(--bg-base)',
+          borderLeft: '1px solid var(--border-subtle)',
+        }}
+      >
         <ParlaySlip />
       </aside>
 
-      {/* Mobile FAB — EXISTING */}
+      {/* Mobile FAB */}
       {hasLegs && (
-        <button onClick={() => setSlipOpen(true)}
-          className="lg:hidden fixed bottom-5 right-5 z-50 flex items-center gap-2 px-5 py-3  bg-primary text-white font-bold text-sm shadow-glow active:scale-95 transition-all">
+        <button
+          onClick={() => setSlipOpen(true)}
+          className="lg:hidden fixed bottom-5 right-5 z-50 flex items-center gap-2 px-5 py-3 font-semibold text-sm rounded-xl transition-all active:scale-95"
+          style={{
+            backgroundColor: 'var(--accent-mocha)',
+            color: 'var(--text-inverse)',
+            boxShadow: 'var(--shadow-mocha-lg)',
+          }}
+        >
           {state.legs.length} Leg{state.legs.length !== 1 && "s"}
         </button>
       )}
 
-      {/* Mobile slip overlay — EXISTING */}
+      {/* Mobile slip overlay */}
       {state.isOpen && hasLegs && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col">
-          <div role="presentation" className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => setSlipOpen(false)} />
-          <div className="bg-surface-1 border-t border-border-default rounded-t-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
+          <div
+            role="presentation"
+            className="flex-1 backdrop-blur-sm"
+            style={{ backgroundColor: 'rgba(28,25,23,0.5)' }}
+            onClick={() => setSlipOpen(false)}
+          />
+          <div
+            className="max-h-[85vh] overflow-y-auto animate-slide-up rounded-t-2xl"
+            style={{ backgroundColor: 'var(--bg-base)', borderTop: '1px solid var(--border-subtle)' }}
+          >
             <ParlaySlip />
           </div>
         </div>
@@ -291,16 +439,26 @@ function EmptyState({ search, activeOnly, onShowSettled }: {
 }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-12 h-12  bg-surface-2 border border-border-default mx-auto flex items-center justify-center mb-3">
-        <Search className="text-text-muted" size={24} />
+      <div
+        className="w-12 h-12 rounded-xl mx-auto flex items-center justify-center mb-4"
+        style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+      >
+        <Search style={{ color: 'var(--text-muted)' }} size={22} />
       </div>
-      <p className="text-sm text-text-muted mb-1">
+      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
         {search ? "No markets match your search." : "No active markets found."}
       </p>
-      <p className="text-xs text-text-muted mb-2">Try adjusting your filters or search query.</p>
+      <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+        Try adjusting your filters or search query.
+      </p>
       {activeOnly && (
-        <button onClick={onShowSettled}
-          className="text-xs text-primary hover:underline">
+        <button
+          onClick={onShowSettled}
+          className="text-xs font-medium transition-colors"
+          style={{ color: 'var(--accent-mocha)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}
+        >
           Show settled markets →
         </button>
       )}

@@ -40,38 +40,15 @@ export function useOrderSigning() {
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const { address, isConnected } = useAuth();
-  const { credentials: userCredentials } = usePolymarketAuth();
+  const { credentials: userCredentials, proxyWallet } = usePolymarketAuth();
   const { checkAllowances, approveAll } = useUsdcApproval();
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [legStatuses, setLegStatuses] = useState<LegSigningStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [balanceInfo, setBalanceInfo] = useState<{ bridged: number; native: number; required: number } | null>(null);
-  const [proxyWallet, setProxyWallet] = useState<string | null>(null);
-  const [proxyLookupDone, setProxyLookupDone] = useState(false);
   const [approvalStep, setApprovalStep] = useState<string | null>(null);
-
-  // Proxy lookup
-  useEffect(() => {
-    if (!address) { setProxyWallet(null); setProxyLookupDone(false); return; }
-
-    setProxyLookupDone(false);
-    fetch(`/api/proxy-wallet?address=${address}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.proxyWallet) {
-          if (d.isProxyItself) {
-            setProxyWallet(null);
-          } else {
-            setProxyWallet(d.proxyWallet);
-          }
-        } else {
-          setProxyWallet(null);
-        }
-        setProxyLookupDone(true);
-      })
-      .catch(() => { setProxyLookupDone(true); });
-  }, [address]);
+  const proxyLookupDone = true;
 
   const updateLeg = (id: string, update: Partial<LegSigningStatus>) => {
     setLegStatuses((prev) => prev.map((l) => l.legId === id ? { ...l, ...update } : l));
@@ -238,34 +215,38 @@ export function useOrderSigning() {
 
     // === USDC Allowance Check & Approval ===
     // Polymarket requires USDC.e approval for the CTF Exchange contracts.
-    // Without approval, ALL orders will be rejected with "not enough balance / allowance".
-    try {
-      setPhase("approving");
-      setApprovalStep("Checking USDC allowances...");
+    // However, if the user is trading via a Proxy Wallet (Deep Integration), 
+    // the relayer handles this or the user already deposited to the proxy which manages it.
+    // Approvals from the EOA to the exchange are only needed if trading directly from EOA.
+    if (!proxyWallet) {
+      try {
+        setPhase("approving");
+        setApprovalStep("Checking USDC allowances...");
 
-      const approvalStatus = await checkAllowances(finalMaker as `0x${string}`, totalStake);
+        const approvalStatus = await checkAllowances(finalMaker as `0x${string}`, totalStake);
 
-      if (!approvalStatus.allApproved) {
-        setApprovalStep("Approve USDC spending (one-time setup)...");
+        if (!approvalStatus.allApproved) {
+          setApprovalStep("Approve USDC spending (one-time setup)...");
 
-        const approved = await approveAll(
-          finalMaker as `0x${string}`,
-          totalStake,
-          (step) => setApprovalStep(step),
-        );
+          const approved = await approveAll(
+            finalMaker as `0x${string}`,
+            totalStake,
+            (step) => setApprovalStep(step),
+          );
 
-        if (!approved) {
-          setPhase("error");
-          setError("USDC approval was rejected. You must approve the exchange contracts to place orders.");
-          return { success: false, error: "USDC approval rejected" };
+          if (!approved) {
+            setPhase("error");
+            setError("USDC approval was rejected. You must approve the exchange contracts to place orders.");
+            return { success: false, error: "USDC approval rejected" };
+          }
+
+        } else {
         }
-
-      } else {
+      } catch (err) {
+        setPhase("error");
+        setError("Failed to check/set USDC approval. Please try again.");
+        return { success: false, error: "Approval check failed" };
       }
-    } catch (err) {
-      setPhase("error");
-      setError("Failed to check/set USDC approval. Please try again.");
-      return { success: false, error: "Approval check failed" };
     }
 
     // Sign orders

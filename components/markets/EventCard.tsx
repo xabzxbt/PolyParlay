@@ -8,7 +8,7 @@ import { calculateEventQualityScore } from "@/lib/quality-score";
 import QualityBadge from "@/components/markets/QualityBadge";
 import SmartMoneyBadge from "@/components/markets/SmartMoneyBadge";
 import { isActiveMarket } from "@/lib/filters";
-import { ChevronDown, ChevronUp, Timer, Users, TrendingUp, Target } from "lucide-react";
+import { ChevronDown, ChevronUp, Timer } from "lucide-react";
 
 interface Market {
   id: string; conditionId: string; question: string; category: string;
@@ -34,13 +34,12 @@ export default function EventCard({ event }: { event: EventData }) {
   const isSingle = event.markets.length === 1;
   const activeMarkets = useMemo(() => {
     const now = new Date();
-    return event.markets.filter(m => isActiveMarket(m, now));
+    return event.markets.filter(m => isActiveMarket(m, now) && m.yesPrice > 0 && m.noPrice > 0);
   }, [event.markets]);
 
   const visibleMarkets = expanded ? activeMarkets : activeMarkets.slice(0, INITIAL_SHOW);
   const hiddenCount = activeMarkets.length - INITIAL_SHOW;
   const totalHiddenCount = event.markets.length - activeMarkets.length;
-  const catColor = getCategoryColor(event.category);
   const liq = getLiquidityLevel(event.liquidity);
 
   const quality = useMemo(() => calculateEventQualityScore({
@@ -68,44 +67,98 @@ export default function EventCard({ event }: { event: EventData }) {
   };
 
   return (
-    <div className="card overflow-hidden animate-fade-in border-none hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-      {/* Featured badge for high-volume events */}
+    <div
+      className="card card-animate card-hover overflow-hidden animate-card-appear"
+      style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}
+    >
+      {/* Trending badge */}
       {event.volume24hr > 100000 && (
-        <div className="bg-gradient-to-r from-warn/10 to-transparent border-b border-warn/10 px-4 py-1.5 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-pill bg-warning animate-pulse" />
-          <span className="text-[10px] font-bold text-warning-dark uppercase tracking-wider">Trending — ${formatVolume(event.volume24hr)} vol</span>
+        <div
+          className="px-4 py-1.5 flex items-center gap-1.5"
+          style={{
+            borderBottom: '1px solid rgba(184,150,90,0.15)',
+            backgroundColor: 'rgba(184,150,90,0.06)',
+          }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-gold)' }} />
+          <span
+            className="font-mono text-[10px] font-medium tracking-widest uppercase"
+            style={{ color: 'var(--accent-gold)' }}
+          >
+            Trending — ${formatVolume(event.volume24hr)} vol
+          </span>
         </div>
       )}
 
-      {/* Event header — clickable link to event detail */}
-      <div role="button" tabIndex={0} className="flex items-start gap-4 p-4 pb-3 cursor-pointer group/header"
-        onClick={() => router.push(`/event/${event.id}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/event/${event.id}`); } }}>
+      {/* Event header */}
+      <div
+        role="button"
+        tabIndex={0}
+        className="flex items-start gap-4 p-4 pb-3 cursor-pointer group/header"
+        onClick={() => router.push(`/event/${event.id}`)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/event/${event.id}`); } }}
+      >
         {event.imageUrl ? (
-          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-surface-1 ring-1 ring-stroke shadow-sm">
-            <Image unoptimized src={event.imageUrl} alt={event.title} width={48} height={48} className="w-full h-full object-cover transition-transform group-hover/header:scale-105"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <div
+            className="w-11 h-11 rounded-lg overflow-hidden shrink-0"
+            style={{ border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-elevated)' }}
+          >
+            <Image
+              unoptimized
+              src={event.imageUrl}
+              alt={event.title}
+              width={44}
+              height={44}
+              className="w-full h-full object-cover transition-transform group-hover/header:scale-105"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
           </div>
         ) : (
-          <div className="w-12 h-12 rounded-lg bg-surface-1 shrink-0 flex items-center justify-center text-xl ring-1 ring-stroke text-text-secondary group-hover/header:text-primary transition-colors">
+          <div
+            className="w-11 h-11 rounded-lg shrink-0 flex items-center justify-center text-lg"
+            style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+          >
             {getCategoryIcon(event.category)}
           </div>
         )}
+
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-text-primary leading-tight line-clamp-2 mb-2 group-hover/header:text-primary transition-colors">{event.title}</h3>
+          <h3
+            className="text-sm font-semibold leading-snug line-clamp-2 mb-2 transition-colors group-hover/header:underline decoration-1 underline-offset-2"
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)', fontSize: '15px' }}
+          >
+            {event.title}
+          </h3>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-pill bg-surface-1 border border-border-default text-text-secondary uppercase tracking-wider">
+            {/* Category pill */}
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-widest"
+              style={{
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+              }}
+            >
               {event.category}
             </span>
             {!isSingle && (
-              <span className="text-[10px] font-medium text-text-muted bg-surface-1 px-2 py-0.5 rounded-pill border border-transparent">
+              <span
+                className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-elevated)' }}
+              >
                 {event.marketCount} markets
               </span>
             )}
-            <span className="flex items-center gap-1 text-[10px] text-text-muted font-medium ml-1">
-              <span className={cn("w-1.5 h-1.5 rounded-pill", liq === "high" ? "bg-success" : liq === "mid" ? "bg-warning" : "bg-error")} />
+            <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{
+                  backgroundColor: liq === 'high' ? 'var(--accent-green)' : liq === 'mid' ? 'var(--accent-gold)' : 'var(--accent-red)'
+                }}
+              />
               {formatVolume(event.volume)}
             </span>
-            <span className="flex items-center gap-1 text-[10px] text-text-muted font-medium">
+            <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
               <Timer size={10} /> {timeUntil(new Date(event.endDate))}
             </span>
             <QualityBadge quality={quality} />
@@ -119,49 +172,80 @@ export default function EventCard({ event }: { event: EventData }) {
       {/* Markets list */}
       <div className="px-3 pb-3 space-y-1.5">
         {visibleMarkets.map((m) => {
-          const yp = Math.round(m.yesPrice * 100);
+          const rawYp = m.yesPrice > 0 ? m.yesPrice * 100 : 0;
+          const yp = Math.round(rawYp);
+          const ypLabel = rawYp > 0 && rawYp < 0.5 ? '<1%' : `${yp}%`;
           const side = getMarketSide(m.id);
           const inParlay = isMarketInParlay(m.id);
 
           return (
-            <div key={m.id} role="button" tabIndex={0}
+            <div
+              key={m.id}
+              role="button"
+              tabIndex={0}
               onClick={() => router.push(`/market/${m.id}`)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/market/${m.id}`); } }}
-              className={cn(
-                "flex items-center gap-3 p-3 rounded-card border transition-all cursor-pointer group hover:shadow-sm",
-                inParlay
-                  ? "bg-primary/5 border-primary/30 ring-1 ring-primary/10"
-                  : "bg-white border-border-default hover:border-primary/20"
-              )}>
+              className="flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group"
+              style={{
+                backgroundColor: inParlay ? 'rgba(156,123,94,0.08)' : 'var(--bg-base)',
+                borderColor: inParlay ? 'rgba(156,123,94,0.3)' : 'var(--border-subtle)',
+                ...(inParlay ? { boxShadow: '0 0 0 1px rgba(156,123,94,0.15)' } : {}),
+              }}
+            >
               {/* Market question */}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-text-secondary line-clamp-2 group-hover:text-text-primary transition-colors leading-snug">
+                <p
+                  className="text-xs font-medium line-clamp-2 leading-snug transition-colors group-hover:underline decoration-1 underline-offset-2"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
                   {m.groupItemTitle || m.question}
                 </p>
               </div>
 
-              {/* Probability */}
-              <span className={cn(
-                "text-sm font-bold font-tabular shrink-0 w-10 text-right",
-                yp >= 70 ? "text-success" : yp <= 30 ? "text-error" : "text-text-primary"
-              )}>
-                {yp}%
-              </span>
+              {/* Probability bar + value */}
+              <div className="shrink-0 flex flex-col items-end gap-1 w-12">
+                <span
+                  className="text-sm font-bold font-tabular"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    color: yp >= 70 ? 'var(--accent-green)' : yp <= 30 ? 'var(--accent-red)' : 'var(--text-primary)',
+                  }}
+                >
+                  {ypLabel}
+                </span>
+                <div className="prob-bar w-10">
+                  <div className="prob-fill" style={{ width: `${Math.max(yp, rawYp > 0 ? 2 : 0)}%` }} />
+                </div>
+              </div>
 
-              {/* Quick Yes/No buttons */}
+              {/* YES/NO buttons */}
               <div className="flex gap-1.5 shrink-0">
-                <button onClick={(e) => handleAdd(m, "YES", e)}
-                  className={cn("px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border",
-                    side === "YES"
-                      ? "bg-success text-white border-success shadow-sm"
-                      : "bg-white border-border-default text-success hover:bg-success/5 hover:border-success/30"
-                  )}>Yes</button>
-                <button onClick={(e) => handleAdd(m, "NO", e)}
-                  className={cn("px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border",
-                    side === "NO"
-                      ? "bg-error text-white border-error shadow-sm"
-                      : "bg-white border-border-default text-error hover:bg-error/5 hover:border-error/30"
-                  )}>No</button>
+                <button
+                  onClick={(e) => handleAdd(m, "YES", e)}
+                  className="px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all"
+                  style={{
+                    backgroundColor: side === "YES" ? '#166534' : 'var(--accent-green)',
+                    color: '#FFFFFF',
+                    boxShadow: '0 1px 4px rgba(21,128,61,0.3)',
+                    outline: side === "YES" ? '2px solid #166534' : 'none',
+                    outlineOffset: '2px',
+                  }}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={(e) => handleAdd(m, "NO", e)}
+                  className="px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all"
+                  style={{
+                    backgroundColor: side === "NO" ? '#991b1b' : 'var(--accent-red)',
+                    color: '#FFFFFF',
+                    boxShadow: '0 1px 4px rgba(185,28,28,0.3)',
+                    outline: side === "NO" ? '2px solid #991b1b' : 'none',
+                    outlineOffset: '2px',
+                  }}
+                >
+                  No
+                </button>
               </div>
             </div>
           );
@@ -171,33 +255,59 @@ export default function EventCard({ event }: { event: EventData }) {
       {/* "+X more" expander */}
       {activeMarkets.length > INITIAL_SHOW && (
         <div className="px-3 pb-3 pt-0">
-          <button onClick={() => setExpanded(!expanded)}
-            className="w-full py-2.5 rounded-b-card text-xs font-bold text-text-muted hover:text-primary hover:bg-surface-1 border-t border-border-default hover:border-primary/20 transition-all flex items-center justify-center gap-1 group">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full py-2.5 rounded-b-xl text-xs font-medium transition-all flex items-center justify-center gap-1"
+            style={{
+              color: 'var(--text-muted)',
+              borderTop: '1px solid var(--border-subtle)',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-mocha)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+          >
             {expanded ? <><ChevronUp size={14} /> Show less</> : <><ChevronDown size={14} /> +{hiddenCount} more markets</>}
           </button>
         </div>
       )}
 
-      {totalHiddenCount > 0 && !expanded && (
-        <div className="px-4 pb-3 text-[9px] text-text-muted opacity-60">
-          + {totalHiddenCount} markets outside 7-93% range hidden
-        </div>
-      )}
 
-      {/* Combo bet CTA for multi-market events */}
-      {event.markets.length >= 2 && (
-        <div className="mx-3 mb-3 p-2.5 bg-gradient-to-r from-primary/5 to-transparent border border-primary/10 rounded-card">
-          <div className="flex items-center gap-2.5 text-xs">
-            <span className="w-5 h-5 rounded-pill bg-primary/10 flex items-center justify-center text-[10px] shrink-0 text-primary">
-              <Target size={12} strokeWidth={2.5} />
-            </span>
-            <p className="text-primary font-medium flex-1 leading-snug">
-              Combo {event.markets.length} markets → <span className="font-bold">{
-                event.markets.reduce((mult: number, m: Market) => mult * (1 / Math.min(m.yesPrice, m.noPrice)), 1).toFixed(0)
-              }x</span> payout
-            </p>
-            <button onClick={() => router.push(`/event/${event.id}`)}
-              className="text-[10px] font-bold text-white bg-primary hover:bg-primary-hover px-2 py-1 rounded-pill shadow-sm transition-all">
+
+      {/* Build Parlay CTA */}
+      {activeMarkets.length >= 2 && (
+        <div
+          className="mx-3 mb-3 p-3 rounded-xl"
+          style={{
+            background: 'linear-gradient(135deg, rgba(156,123,94,0.08) 0%, rgba(184,150,90,0.05) 100%)',
+            border: '1px solid rgba(156,123,94,0.15)',
+          }}
+        >
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex-1 leading-snug" style={{ color: 'var(--text-secondary)' }}>
+              Combine {activeMarkets.length} markets →{' '}
+              <span
+                className="font-bold"
+                style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', fontSize: '13px' }}
+              >
+                {(() => {
+                  const raw = activeMarkets.reduce((mult: number, m: Market) => {
+                    const minP = Math.min(Math.max(m.yesPrice || 0.01, 0.001), Math.max(m.noPrice || 0.01, 0.001));
+                    return mult * (1 / minP);
+                  }, 1);
+                  return raw > 9999 ? '>9,999x' : `${Math.round(raw).toLocaleString()}x`;
+                })()}
+              </span>
+              {' '}payout
+            </div>
+            <button
+              onClick={() => router.push(`/event/${event.id}`)}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-98"
+              style={{
+                backgroundColor: 'var(--accent-mocha)',
+                color: 'var(--text-inverse)',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-mocha-hover)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-mocha)'; }}
+            >
               Build Parlay
             </button>
           </div>

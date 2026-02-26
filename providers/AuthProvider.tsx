@@ -10,14 +10,14 @@ interface AuthContextType {
   isConnecting: boolean;
   disconnect: () => void;
   shortAddress: string;
-  signer: Promise<JsonRpcSigner> | null;
+  signer: Promise<JsonRpcSigner | null> | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
   address: undefined,
   isConnected: false,
   isConnecting: false,
-  disconnect: () => {},
+  disconnect: () => { },
   shortAddress: "",
   signer: null,
 });
@@ -39,11 +39,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   }, [address]);
 
-  const signer = useMemo(() => {
+  const signer = useMemo(async () => {
     if (!walletClient) return null;
-    const provider = new BrowserProvider(walletClient as any);
-    return provider.getSigner();
-  }, [walletClient]);
+    // For ethers v6, we need to extract the underlying provider from the connector
+    // However, a simple robust way if window.ethereum exists and address matches:
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+      const provider = new BrowserProvider((window as any).ethereum);
+      const s = await provider.getSigner(address);
+      if (s.address.toLowerCase() === address?.toLowerCase()) {
+        return s;
+      }
+    }
+
+    // Fallback: Use the transport from walletClient (works for WalletConnect via Wagmi ConnectorClient)
+    try {
+      const { account, chain, transport } = walletClient as any;
+      const provider = new BrowserProvider(transport, chain ? {
+        chainId: chain.id,
+        name: chain.name,
+      } : undefined);
+      return await provider.getSigner(account?.address || address);
+    } catch (e) {
+      console.error("Failed to create ethers signer:", e);
+      return null;
+    }
+  }, [walletClient, address]);
 
   const disconnect = useCallback(() => {
     wagmiDisconnect();

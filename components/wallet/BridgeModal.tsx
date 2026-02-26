@@ -6,7 +6,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useWalletClient, usePublicClient } from "wagmi";
 import { getDepositUrl, withdrawUSDCFlow } from "@/lib/polymarket/bridge";
 import { formatUnits, erc20Abi } from "viem";
-import { ExternalLink, ArrowRightLeft, ArrowDownToLine, ArrowUpFromLine, Loader2, Check } from "lucide-react";
+import { ExternalLink, ArrowRightLeft, ArrowDownToLine, ArrowUpFromLine, Loader2, Check, Copy } from "lucide-react";
+import { usePolymarketAuth } from "@/hooks/usePolymarketAuth";
 
 interface BridgeModalProps {
     isOpen: boolean;
@@ -33,14 +34,25 @@ export default function BridgeModal({ isOpen, onClose, defaultTab = "deposit" }:
     const [withdrawTx, setWithdrawTx] = useState("");
     const [withdrawError, setWithdrawError] = useState("");
 
+    const { proxyWallet, loadProxyWallet } = usePolymarketAuth();
+
+    // Fetch Proxy Wallet address on mount
+    useEffect(() => {
+        if (isOpen && address && !proxyWallet) {
+            loadProxyWallet(address);
+        }
+    }, [isOpen, address, proxyWallet, loadProxyWallet]);
+
+    const activeAddress = proxyWallet || address;
+
     const fetchBalance = useCallback(async (setInitial: boolean = false) => {
-        if (!address || !publicClient) return;
+        if (!activeAddress || !publicClient) return;
         try {
             const balStr = await publicClient.readContract({
                 address: USDC_BRIDGED,
                 abi: erc20Abi,
                 functionName: "balanceOf",
-                args: [address as `0x${string}`],
+                args: [activeAddress as `0x${string}`],
             });
             const bal = parseFloat(formatUnits(balStr as bigint, 6));
             setBalance(bal);
@@ -53,7 +65,7 @@ export default function BridgeModal({ isOpen, onClose, defaultTab = "deposit" }:
             }
         } catch (e) {
         }
-    }, [address, publicClient, initialBalance]);
+    }, [activeAddress, publicClient, initialBalance]);
 
     useEffect(() => {
         if (isOpen) {
@@ -133,21 +145,40 @@ export default function BridgeModal({ isOpen, onClose, defaultTab = "deposit" }:
                 {/* DEPOSIT TAB */}
                 {activeTab === "deposit" && (
                     <div className="space-y-6">
-                        <div className="bg-surface-2 rounded-card p-4 text-center">
-                            <p className="text-text-muted text-sm mb-1">Your Polygon USDC.e Balance</p>
-                            <div className="text-3xl font-bold text-white">${balance.toFixed(2)}</div>
+                        <div className="bg-surface-2 rounded-card p-4 text-center border border-border-default/50">
+                            <p className="text-text-muted text-sm mb-1 uppercase tracking-wider text-[10px] font-bold">Your Polymarket Trading Balance</p>
+                            <div className="text-4xl font-bold font-mono text-white mb-3" style={{ color: 'var(--accent-green)' }}>
+                                ${balance.toFixed(2)}
+                            </div>
+
+                            {typeof proxyWallet === 'string' && (
+                                <div className="mt-4 pt-4 border-t border-border-default flex flex-col items-center gap-2">
+                                    <span className="text-xs text-text-muted">Polymarket Proxy Wallet:</span>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(proxyWallet);
+                                            setDepositDetected(true);
+                                            setTimeout(() => setDepositDetected(false), 2000);
+                                        }}
+                                        className="flex items-center justify-center gap-2 bg-surface bg-opacity-50 hover:bg-opacity-100 border border-border-subtle rounded-lg py-1.5 px-3 text-xs font-mono text-text-primary transition-all"
+                                    >
+                                        {proxyWallet.slice(0, 8)}...{proxyWallet.slice(-6)}
+                                        <Copy size={12} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3">
                             <p className="text-sm text-text-secondary text-center">
-                                Deposit native USDC from any chain, automatically converted to USDC.e on Polygon.
+                                Deposit native USDC from any chain to your Polymarket account.
                             </p>
 
                             <a
-                                href={address ? getDepositUrl(address) : "https://bridge.polymarket.com"}
+                                href={typeof proxyWallet === 'string' ? `https://polymarket.com/profile/${proxyWallet}` : "https://polymarket.com/deposit"}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-3 px-4 rounded-card transition-colors border border-primary/30"
+                                className="w-full py-3 bg-surface-2 hover:bg-surface-3 transition-colors text-text-primary rounded-xl font-medium border border-border-default hover:border-text-muted flex justify-center items-center gap-2"
                             >
                                 Deposit via Polymarket Bridge <ExternalLink size={16} />
                             </a>

@@ -168,7 +168,7 @@ export default function ConfirmModal({ isOpen, onClose, legs, stake, combinedOdd
               </div>
             )}
 
-            {proxyWallet && (
+            {typeof proxyWallet === 'string' && (
               <p className="text-[9px] text-text-disabled mt-1 text-right font-mono">
                 Proxy: {proxyWallet.slice(0, 6)}…{proxyWallet.slice(-4)}
               </p>

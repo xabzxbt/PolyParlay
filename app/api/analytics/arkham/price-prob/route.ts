@@ -1,40 +1,47 @@
 import { NextResponse } from "next/server";
-import { getActiveEvents } from "@/lib/polymarket/gamma";
 
 export const revalidate = 30;
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        let marketId = searchParams.get("market");
+        // Accept either a token ID directly, or fall back to market/conditionId
+        const tokenId = searchParams.get("token") || searchParams.get("market");
 
-        if (!marketId) {
-            const { events } = await getActiveEvents({ limit: 1, order: "volume24hr", ascending: false });
-            if (events && events.length > 0 && events[0].markets && events[0].markets.length > 0) {
-                marketId = events[0].markets[0].conditionId;
+        if (!tokenId) {
+            return NextResponse.json({ success: false, data: { history: [], volatilityIndex: 0 } }, { status: 400 });
+        }
+
+        // CLOB API: ?market= takes a TOKEN ID (yes token), not conditionId
+        // Try multiple intervals to get the best data
+        let priceHistory: any[] = [];
+
+        for (const interval of ["1d", "1w", "max"]) {
+            const url = `https://clob.polymarket.com/prices-history?market=${tokenId}&interval=${interval}&fidelity=60`;
+            const res = await fetch(url, { next: { revalidate: 30 } });
+            if (res.ok) {
+                const h = await res.json();
+                if (h.history && h.history.length > 1) {
+                    priceHistory = h.history;
+                    break;
+                }
             }
         }
 
-        if (!marketId) throw new Error("No market available");
-
-        const historyRes = await fetch(`https://clob.polymarket.com/prices-history?market=${marketId}&interval=1d`, { next: { revalidate: 30 } });
-
-        let priceHistory = [];
-        if (historyRes.ok) {
-            const h = await historyRes.json();
-            priceHistory = h.history || [];
-        }
-
-        const volatility = priceHistory.length > 0
+        const volatility = priceHistory.length > 1
             ? Math.abs(priceHistory[0].p - priceHistory[priceHistory.length - 1].p)
             : 0;
 
         return NextResponse.json({
             success: true,
             data: {
-                history: priceHistory.map((p: any) => ({ time: new Date(p.t * 1000).toISOString(), price: p.p })),
-                volatilityIndex: volatility * 100, // naive score
-                marketId
+                history: priceHistory.map((p: any) => ({
+                    time: new Date(p.t * 1000).toISOString(),
+                    price: p.p
+                })),
+                volatilityIndex: (volatility * 100).toFixed(2),
+                tokenId,
+                hasData: priceHistory.length > 1,
             },
             lastUpdated: new Date().toISOString()
         }, { headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=59' } });

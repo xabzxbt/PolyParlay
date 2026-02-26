@@ -1,16 +1,37 @@
-"use client";
-
 import React, { useMemo, useState } from "react";
 import useSWR from "swr";
 import {
     Activity, ShieldCheck, Zap, Users,
     Calculator, Clock, TrendingUp, TrendingDown,
-    AlertTriangle, Brain
+    AlertTriangle, Brain, Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getQuantMetrics } from "@/lib/quant-models";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+
+function InfoTip({ text }: { text: string }) {
+    const [v, setV] = useState(false);
+    return (
+        <span style={{ position: 'relative', display: 'inline-flex', cursor: 'help' }}>
+            <Info size={11} style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={() => setV(true)} onMouseLeave={() => setV(false)} />
+            {v && (
+                <span style={{
+                    position: 'absolute', bottom: '120%', left: '50%', transform: 'translateX(-50%)',
+                    backgroundColor: '#111', color: '#f8fafc',
+                    fontSize: '10px', lineHeight: 1.5, padding: '6px 10px',
+                    borderRadius: '6px', width: '200px', zIndex: 100,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    pointerEvents: 'none', textAlign: 'left',
+                }}>
+                    {text}
+                </span>
+            )}
+        </span>
+    );
+}
+
 
 interface OnChainAnalyticsProps {
     market: any;
@@ -105,6 +126,7 @@ export default function OnChainAnalytics({ market }: OnChainAnalyticsProps) {
                         <div className="bg-surface-1 border border-border-default rounded-card p-4 hover:border-primary/30 transition-colors">
                             <div className="flex items-center gap-2 mb-2 text-text-secondary font-bold uppercase text-xs">
                                 <ShieldCheck className="w-4 h-4 text-primary" /> Centralization (HHI)
+                                <InfoTip text="Herfindahl-Hirschman Index: measures how concentrated holdings are. HIGH = a few whales control most money (risky). LOW = distributed among many traders (healthier)." />
                             </div>
                             <div className={cn("text-2xl font-mono font-bold", analytics.hhiLabel === "High" ? "text-red-500" : "text-text-primary")}>
                                 {analytics.hhiLabel}
@@ -116,6 +138,7 @@ export default function OnChainAnalytics({ market }: OnChainAnalyticsProps) {
                         <div className="bg-surface-1 border border-border-default rounded-card p-4 hover:border-primary/30 transition-colors">
                             <div className="flex items-center gap-2 mb-2 text-text-secondary font-bold uppercase text-xs">
                                 <Zap className="w-4 h-4 text-primary" /> Wash Index
+                                <InfoTip text="Estimated % of volume that may be wash trading (buy + sell by same wallet with little net change). Below 5% = clean. Above 15% = potentially manipulated." />
                             </div>
                             <div className={cn("text-2xl font-mono font-bold", isWashHigh ? "text-red-500" : "text-green-500")}>
                                 {fmtPct(analytics.washTradingIndex)}
@@ -128,6 +151,7 @@ export default function OnChainAnalytics({ market }: OnChainAnalyticsProps) {
                             <div className="bg-surface-1 border border-border-default rounded-card p-4 hover:border-primary/30 transition-colors">
                                 <div className="flex items-center gap-2 mb-2 text-text-secondary font-bold uppercase text-xs">
                                     <Calculator className="w-4 h-4 text-yellow-500" /> Optimal Kelly Size
+                                    <InfoTip text="Kelly Criterion: the mathematically optimal % of bankroll to risk. Based on edge vs. risk/reward. Higher % = stronger edge. Use as a guide, not a rule." />
                                 </div>
                                 <div className="text-2xl font-mono font-bold text-yellow-500">
                                     {fmtPct(quantMetrics.kelly.fraction * 100)}
@@ -140,6 +164,7 @@ export default function OnChainAnalytics({ market }: OnChainAnalyticsProps) {
                         <div className="bg-surface-1 border border-border-default rounded-card p-4 hover:border-primary/30 transition-colors">
                             <div className="flex items-center gap-2 mb-2 text-text-secondary font-bold uppercase text-xs">
                                 <Brain className="w-4 h-4 text-purple-500" /> Smart Money
+                                <InfoTip text="Wallets with PnL > $1,000 on this market. High count = experienced traders are actively positioned. A directional lean from smart money is a strong signal." />
                             </div>
                             <div className="text-2xl font-mono font-bold text-purple-500">
                                 {analytics.smartMoneyCount} <span className="text-sm font-sans">Wallets</span>
@@ -158,10 +183,12 @@ export default function OnChainAnalytics({ market }: OnChainAnalyticsProps) {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {highStakes.slice(0, 4).map((w: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center p-3 bg-white border border-red-500/20 rounded-lg">
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
                                         <div>
-                                            <div className="font-bold text-xs">{w.name || `${w.address.slice(0, 6)}...`}</div>
-                                            <div className="text-[10px] text-text-muted">Last active: {new Date(w.lastActive).toLocaleDateString()}</div>
+                                            <div style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-primary)' }}>{w.name || `${w.address?.slice(0, 6) ?? '???'}...`}</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                                Last active: {w.lastActive ? new Date(w.lastActive).toLocaleDateString() : 'Unknown'}
+                                            </div>
                                         </div>
                                         <div className="text-right">
                                             <div className={cn("font-bold font-mono text-sm", w.side === "YES" ? "text-green-500" : "text-red-500")}>

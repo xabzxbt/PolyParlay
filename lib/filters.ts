@@ -22,19 +22,25 @@ export interface FilterState {
 
 export function isActiveMarket(m: any, now: Date = new Date()): boolean {
   if (!m) return false;
-  if (m.active === false) return false;
-  // Bugfix: Ensure closed/resolved markets are strictly excluded
+
+  // 1. Strictly exclude resolved or closed markets
   if (m.closed || m.resolved || m.resolvedBy) return false;
 
+  // 2. Exclude markets whose end date has passed
+  if (m.endDate && new Date(m.endDate) < now) return false;
+
+  // 3. Exclude extreme "locked" odds where there is no real money to be made
+  // The user explicitly requested removing "99 to 1" markets.
+  // We keep anything between 1.5% and 98.5% (like ZachXBT at 3%).
   const p = m.yesPrice;
   if (p === undefined || p === null) return false;
-  if (p < 0.07 || p > 0.93) return false;
-  if (m.endDate && new Date(m.endDate) < now) return false;
+  if (p < 0.015 || p > 0.985) return false;
+
   return true;
 }
 
 export const DEFAULT_FILTERS: FilterState = {
-  activeOnly: true,
+  activeOnly: false,
   search: "",
   hideLowLiquidity: false,
   hideLowVolume: false,

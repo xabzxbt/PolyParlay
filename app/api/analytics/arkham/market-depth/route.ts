@@ -1,40 +1,40 @@
 import { NextResponse } from "next/server";
-import { getActiveEvents } from "@/lib/polymarket/gamma";
 
-// Takes ?market_id={} or defaults to biggest volume market if none
 export const revalidate = 30;
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        let marketId = searchParams.get("market");
+        // CLOB /book?token_id= takes the YES token ID
+        const tokenId = searchParams.get("token") || searchParams.get("market");
 
-        // Let's get top market from gamma if none provided
-        if (!marketId) {
-            const { events } = await getActiveEvents({ limit: 1, order: "volume24hr", ascending: false });
-            if (events && events.length > 0 && events[0].markets && events[0].markets.length > 0) {
-                marketId = events[0].markets[0].conditionId; // Fallback to token/conditionID
+        if (!tokenId) {
+            return NextResponse.json({ success: false, data: null, error: "Token ID required" }, { status: 400 });
+        }
+
+        // Try both token param styles (CLOB API supports both ?token_id= and ?market= but token_id is preferred)
+        let bookData: { bids: any[]; asks: any[] } = { bids: [], asks: [] };
+
+        for (const paramStyle of [`token_id=${tokenId}`, `market=${tokenId}`]) {
+            const bookRes = await fetch(`https://clob.polymarket.com/book?${paramStyle}`, {
+                next: { revalidate: 30 }
+            });
+            if (bookRes.ok) {
+                const bd = await bookRes.json();
+                if (bd && (bd.bids?.length > 0 || bd.asks?.length > 0)) {
+                    bookData = bd;
+                    break;
+                }
             }
         }
 
-        if (!marketId) {
-            return NextResponse.json({ success: false, data: null, error: "Market ID not found" }, { status: 400 });
-        }
-
-        const bookRes = await fetch(`https://clob.polymarket.com/book?market=${marketId}`, { next: { revalidate: 30 } });
-
-        let bookData = { bids: [], asks: [] };
-        if (bookRes.ok) {
-            bookData = await bookRes.json();
-        }
-
-        // Bids vs asks imbalance calculations
+        // Bids vs asks calculations
         let bidVol = 0, askVol = 0;
         bookData.bids.forEach((b: any) => bidVol += parseFloat(b.size || "0") * parseFloat(b.price || "0"));
         bookData.asks.forEach((a: any) => askVol += parseFloat(a.size || "0") * parseFloat(a.price || "0"));
 
-        let bigWalls: any[] = []; // Liquidity walls
-        const wallThreshold = 5000; // $5k
+        const wallThreshold = 5000;
+        const bigWalls: any[] = [];
         [...bookData.bids, ...bookData.asks].forEach((order: any) => {
             const cost = parseFloat(order.size || "0") * parseFloat(order.price || "0");
             if (cost > wallThreshold) {
@@ -53,7 +53,8 @@ export async function GET(request: Request) {
                     ratio: (bidVol / (askVol + bidVol)) || 0.5
                 },
                 liquidityWalls: bigWalls,
-                marketId
+                tokenId,
+                hasData: bookData.bids.length > 0 || bookData.asks.length > 0,
             },
             lastUpdated: new Date().toISOString()
         }, { headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=59' } });

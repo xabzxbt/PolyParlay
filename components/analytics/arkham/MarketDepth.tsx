@@ -7,8 +7,11 @@ import { Box, HelpCircle } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function MarketDepthAnalysis({ marketId }: { marketId?: string }) {
-    const url = marketId ? `/api/analytics/arkham/market-depth?market=${marketId}` : "/api/analytics/arkham/market-depth";
+export default function MarketDepthAnalysis({ marketId, tokenId }: { marketId?: string; tokenId?: string }) {
+    const effectiveId = tokenId || marketId;
+    const url = effectiveId
+        ? `/api/analytics/arkham/market-depth?token=${effectiveId}`
+        : "/api/analytics/arkham/market-depth";
     const { data, error, isLoading } = useSWR(url, fetcher, { refreshInterval: 60000 });
 
     if (error) return <div className="p-4 bg-red-500/10 text-red-500 rounded-card">Error loading Market Depth</div>;

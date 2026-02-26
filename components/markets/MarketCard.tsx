@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { cn, formatVolume, timeUntil, getLiquidityLevel, getCategoryIcon } from "@/lib/utils";
 import { useParlay } from "@/providers/ParlayProvider";
-import { Check, Timer, BarChart3, Globe } from "lucide-react";
+import { Check, Timer, BarChart3 } from "lucide-react";
 
 interface MarketData {
   id: string; conditionId: string; question: string; category: string;
@@ -34,86 +34,153 @@ export default function MarketCard({ market }: { market: MarketData }) {
   };
 
   const yesPercent = Math.round(market.yesPrice * 100);
-  const noPercent = Math.round(market.noPrice * 100);
-  const isPolitics = market.category.toLowerCase() === "politics";
 
   return (
-    <div role="button" tabIndex={0} className={cn(
-      "group relative flex flex-col p-5 bg-white rounded-card shadow-sm transition-all duration-300 cursor-pointer border border-border-default hover:border-primary/30 hover:shadow-elevated-hover",
-      inParlay && "ring-[3px] ring-primary shadow-glow border-primary/50"
-    )} onClick={() => router.push(`/market/${market.id}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/market/${market.id}`); } }}>
-
-      {/* Selected indicator */}
+    <div
+      role="button"
+      tabIndex={0}
+      className="card-animate relative flex flex-col p-5 rounded-xl cursor-pointer transition-all duration-200 group"
+      style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: inParlay ? '1px solid rgba(156,123,94,0.4)' : '1px solid var(--border-subtle)',
+        boxShadow: inParlay ? '0 0 0 2px rgba(156,123,94,0.15), var(--shadow-card)' : 'var(--shadow-card)',
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-hover)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+        (e.currentTarget as HTMLElement).style.boxShadow = inParlay ? '0 0 0 2px rgba(156,123,94,0.15), var(--shadow-card)' : 'var(--shadow-card)';
+      }}
+      onClick={() => router.push(`/market/${market.id}`)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/market/${market.id}`); } }}
+    >
+      {/* Selected checkmark */}
       {inParlay && (
-        <div className="absolute -top-2 -right-2 z-10 w-6 h-6 rounded-pill bg-primary flex items-center justify-center shadow-lg animate-scale-in">
-          <Check size={14} strokeWidth={3} className="text-white" />
+        <div
+          className="absolute -top-2 -right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center animate-scale-in"
+          style={{ backgroundColor: 'var(--accent-mocha)', boxShadow: 'var(--shadow-mocha)' }}
+        >
+          <Check size={13} strokeWidth={2.5} style={{ color: 'var(--text-inverse)' }} />
         </div>
       )}
 
-      {/* Header: Title & Icon */}
-      <div className="flex items-start gap-4 mb-3">
+      {/* Header: Image + Title */}
+      <div className="flex items-start gap-3 mb-4">
         {market.imageUrl ? (
-          <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white ring-1 ring-black/5">
-            <Image unoptimized src={market.imageUrl} alt={market.question} width={40} height={40} className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <div
+            className="w-10 h-10 rounded-lg overflow-hidden shrink-0"
+            style={{ border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-elevated)' }}
+          >
+            <Image
+              unoptimized
+              src={market.imageUrl}
+              alt={market.question}
+              width={40}
+              height={40}
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
           </div>
         ) : (
-          <div className="w-10 h-10 rounded-lg bg-white shrink-0 flex items-center justify-center text-xl shadow-sm">
+          <div
+            className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center text-lg"
+            style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+          >
             {getCategoryIcon(market.category)}
           </div>
         )}
 
-        <h3 className="text-[18px] font-medium text-text-primary leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+        <h3
+          className="text-sm leading-snug line-clamp-3 flex-1"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-primary)',
+            fontSize: '16px',
+            lineHeight: '1.4',
+          }}
+        >
           {market.question}
         </h3>
       </div>
 
-      {/* Main Action Area: Percentage + Buttons */}
+      {/* Probability + YES/NO */}
       <div className="flex items-center justify-between mt-auto mb-4">
-        <div className="flex flex-col">
-          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-0.5">Probability</span>
-          <span className={cn(
-            "text-[36px] font-bold font-tabular leading-none tracking-tight",
-            yesPercent >= 50 ? "text-success" : "text-error"
-          )}>
+        <div className="flex flex-col gap-1">
+          <span
+            className="text-[10px] font-semibold uppercase tracking-widest"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Probability
+          </span>
+          <span
+            className="font-bold font-tabular leading-none"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '32px',
+              color: yesPercent >= 50 ? 'var(--accent-green)' : 'var(--accent-red)',
+            }}
+          >
             {yesPercent}%
           </span>
+          {/* Prob bar */}
+          <div className="prob-bar mt-1" style={{ width: '80px' }}>
+            <div className="prob-fill" style={{ width: `${yesPercent}%` }} />
+          </div>
         </div>
 
         <div className="flex gap-2">
-          <button onClick={(e) => handleAdd("YES", e)} className={cn(
-            "h-[34px] px-3.5 rounded-lg text-xs font-bold transition-all border",
-            side === "YES"
-              ? "bg-success text-white border-success shadow-md"
-              : "bg-transparent text-text-secondary border-border-default hover:border-success hover:text-success hover:bg-success/5"
-          )}>
+          <button
+            onClick={(e) => handleAdd("YES", e)}
+            className="h-9 px-3.5 rounded-lg text-xs font-bold transition-all active:scale-97"
+            style={{
+              backgroundColor: side === "YES" ? '#166534' : 'var(--accent-green)',
+              color: '#FFFFFF',
+              boxShadow: side === "YES" ? '0 0 0 2px #166534, 0 2px 6px rgba(21,128,61,0.35)' : '0 1px 4px rgba(21,128,61,0.3)',
+            }}
+          >
             YES
           </button>
-          <button onClick={(e) => handleAdd("NO", e)} className={cn(
-            "h-[34px] px-3.5 rounded-lg text-xs font-bold transition-all border",
-            side === "NO"
-              ? "bg-error text-white border-error shadow-md"
-              : "bg-transparent text-text-secondary border-border-default hover:border-error hover:text-error hover:bg-error/5"
-          )}>
+          <button
+            onClick={(e) => handleAdd("NO", e)}
+            className="h-9 px-3.5 rounded-lg text-xs font-bold transition-all active:scale-97"
+            style={{
+              backgroundColor: side === "NO" ? '#991b1b' : 'var(--accent-red)',
+              color: '#FFFFFF',
+              boxShadow: side === "NO" ? '0 0 0 2px #991b1b, 0 2px 6px rgba(185,28,28,0.35)' : '0 1px 4px rgba(185,28,28,0.3)',
+            }}
+          >
             NO
           </button>
         </div>
       </div>
 
-      {/* Footer Metadata */}
-      <div className="pt-3 border-t border-black/5 flex items-center justify-between text-xs text-text-secondary">
+      {/* Footer metadata */}
+      <div
+        className="pt-3 flex items-center justify-between text-xs"
+        style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
+      >
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5" title="Volume">
-            <BarChart3 size={14} className="text-text-muted" /> {formatVolume(market.volume)}
+            <BarChart3 size={13} style={{ color: 'var(--text-muted)' }} />
+            {formatVolume(market.volume)}
           </span>
           <span className="flex items-center gap-1.5" title="Ends in">
-            <Timer size={14} className="text-text-muted" /> {timeUntil(new Date(market.endDate))}
+            <Timer size={13} style={{ color: 'var(--text-muted)' }} />
+            {timeUntil(new Date(market.endDate))}
           </span>
         </div>
 
-        {/* Category Badge */}
-        <span className="px-2 py-0.5 bg-white/50 rounded-pill text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1 border border-black/5">
-          {isPolitics && <Globe size={10} />}
+        {/* Category badge */}
+        <span
+          className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-widest"
+          style={{
+            backgroundColor: 'var(--bg-elevated)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-muted)',
+          }}
+        >
           {market.category}
         </span>
       </div>

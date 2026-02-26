@@ -1,135 +1,171 @@
-"use client";
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/providers/AuthProvider";
+import { ClobClient } from "@polymarket/clob-client";
+import { fetchDepositAddresses } from "@/lib/polymarket/bridge";
 
-const STORAGE_KEY = "polymarket_creds";
-const MSG_TO_SIGN = "This message attests that I control the given wallet";
-
-interface ApiKeyCreds {
-  apiKey: string;
-  secret: string;
-  passphrase: string;
-  address?: string;
-}
+const POLYMARKET_CREDS_KEY = "polymarket_creds";
+const PROXY_WALLET_KEY = "polymarket_proxy";
 
 export function usePolymarketAuth() {
   const { address, signer } = useAuth();
-  const [credentials, setCredentials] = useState<ApiKeyCreds | null>(null);
-  const [isDerivingKey, setIsDerivingKey] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [proxyWallet, setProxyWallet] = useState<string | null>(null);
+  const [apiCreds, setApiCreds] = useState<any>(null);
+  const [isL2Connected, setIsL2Connected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Initialize from local storage on load
   useEffect(() => {
-    if (!address) {
-      setCredentials(null);
-      return;
-    }
+    if (address) {
+      const storedCreds = localStorage.getItem(`${POLYMARKET_CREDS_KEY}_${address}`);
+      const storedProxy = localStorage.getItem(`${PROXY_WALLET_KEY}_${address}`);
 
-    const stored = localStorage.getItem(`${STORAGE_KEY}_${address.toLowerCase()}`);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (!parsed.address && address) parsed.address = address; // Backfill if missing
-        setCredentials(parsed);
-      } catch {
+      if (storedCreds) setApiCreds(JSON.parse(storedCreds));
+      if (storedProxy) setProxyWallet(storedProxy);
+
+      if (storedCreds && storedProxy) {
+        setIsL2Connected(true);
+      } else {
+        setIsL2Connected(false);
       }
+    } else {
+      setIsL2Connected(false);
+      setApiCreds(null);
+      setProxyWallet(null);
     }
   }, [address]);
 
-  const deriveAPIKey = async (nonce: number = 0): Promise<boolean> => {
-
-    if (!address || !signer) {
-      setError("Wallet not connected");
-      return false;
-    }
-
-    setIsDerivingKey(true);
-    setError(null);
-
+  /**
+   * Fetches the user's Polymarket Proxy Wallet address (Gnosis Safe).
+   * Polymarket's bridge API returns the deposit addresses for the connected EOA,
+   * where the 'polygon' address is always the user's proxy wallet.
+   */
+  const loadProxyWallet = useCallback(async (walletAddress: string) => {
     try {
-      const timestamp = Math.floor(Date.now() / 1000);
+      const res = await fetchDepositAddresses(walletAddress);
+      // The bridge API usually returns an array or an object. We look for Polygon.
+      // Usually res = [{ network: "polygon", address: "0x..." }, ...] or similar.
+      let proxy = walletAddress; // Fallback to EOA
 
-      const domain = {
-        name: "ClobAuthDomain",
-        version: "1",
-        chainId: 137,
-      };
-
-      const types = {
-        ClobAuth: [
-          { name: "address", type: "address" },
-          { name: "timestamp", type: "string" },
-          { name: "nonce", type: "uint256" },
-          { name: "message", type: "string" },
-        ],
-      };
-
-      const value = {
-        address: address.toLowerCase(), // Force lowercase for signing
-        timestamp: timestamp.toString(),
-        nonce,
-        message: MSG_TO_SIGN,
-      };
-
-
-      const resolvedSigner = await signer;
-      const signature = await resolvedSigner.signTypedData(domain, types, value);
-
-
-
-      // Revert to Server Proxy strategy but with standard POST body data
-      // This avoids client-side header stripping issues by proxies/browsers
-      const res = await fetch("/api/derive-api-key", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: address.toLowerCase(),
-          signature,
-          timestamp: timestamp.toString(),
-          nonce,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to derive API key");
+      if (Array.isArray(res)) {
+        const poly = res.find((r: any) => r.network?.toLowerCase() === "polygon");
+        if (poly && poly.address) proxy = poly.address;
+      } else if (res && typeof res === "object") {
+        if (res.polygon) proxy = res.polygon;
+        else if (res.address) proxy = res.address;
       }
 
-      const creds: ApiKeyCreds & { address: string } = {
-        apiKey: data.apiKey,
-        secret: data.secret,
-        passphrase: data.passphrase,
-        address: address, // Add address here
-      };
+      setProxyWallet(proxy);
+      localStorage.setItem(`${PROXY_WALLET_KEY}_${walletAddress}`, proxy);
+      return proxy;
+    } catch (e) {
+      console.error("Failed to fetch Polymarket Proxy address:", e);
+      return walletAddress; // fallback
+    }
+  }, []);
 
-      localStorage.setItem(
-        `${STORAGE_KEY}_${address.toLowerCase()}`,
-        JSON.stringify(creds),
-      );
+  /**
+   * Connects to Polymarket L2 (CLOB) by prompting the user to sign a message.
+   * This generates the API keys used for gasless trading.
+   */
+  const connectL2 = useCallback(async () => {
+    if (!address || !signer) throw new Error("Wallet not connected");
+    setIsLoading(true);
 
-      setCredentials(creds);
-      return true;
-    } catch (err: any) {
-      setError(err.message || "Failed to derive API key");
-      return false;
+    try {
+      // 1. Get Proxy Wallet (Funder)
+      let funder = proxyWallet;
+      if (!funder) {
+        funder = await loadProxyWallet(address);
+      }
+
+      const ethersSigner = await signer;
+      // Patch for ethers v6 to v5 compatibility
+      if (!(ethersSigner as any)._signTypedData && (ethersSigner as any).signTypedData) {
+        (ethersSigner as any)._signTypedData = (ethersSigner as any).signTypedData.bind(ethersSigner);
+      }
+
+      // 2. Initialize temporary client to create/derive credentials
+      // We use GNOSIS_SAFE (2) as the signature type because Polymarket uses Safe proxies
+      const tempClient = new ClobClient("https://clob.polymarket.com", 137, ethersSigner as any);
+
+      // 3. Derive API Key
+      // This will prompt MetaMask to sign a standardized message
+      const creds = await tempClient.deriveApiKey();
+
+      // Save credentials locally
+      setApiCreds(creds);
+      localStorage.setItem(`${POLYMARKET_CREDS_KEY}_${address}`, JSON.stringify(creds));
+      setIsL2Connected(true);
+
+      return creds;
+    } catch (e) {
+      console.error("L2 Connection failed", e);
+      throw e;
     } finally {
-      setIsDerivingKey(false);
+      setIsLoading(false);
     }
-  };
+  }, [address, signer, proxyWallet, loadProxyWallet]);
 
-  const clearCredentials = () => {
+  /**
+   * Disconnect L2 (removes keys)
+   */
+  const disconnectL2 = useCallback(() => {
     if (address) {
-      localStorage.removeItem(`${STORAGE_KEY}_${address.toLowerCase()}`);
+      localStorage.removeItem(`${POLYMARKET_CREDS_KEY}_${address}`);
+      localStorage.removeItem(`${PROXY_WALLET_KEY}_${address}`);
     }
-    setCredentials(null);
-  };
+    setApiCreds(null);
+    setProxyWallet(null);
+    setIsL2Connected(false);
+  }, [address]);
+
+  /**
+   * Returns a ready-to-use ClobClient instance for trading
+   */
+  const getClient = useCallback(async () => {
+    if (!address || !signer || !apiCreds || !proxyWallet) {
+      throw new Error("L2 Auth not initialized");
+    }
+    const ethersSigner = await signer;
+    // Patch for ethers v6 to v5 compatibility
+    if (!(ethersSigner as any)._signTypedData && (ethersSigner as any).signTypedData) {
+      (ethersSigner as any)._signTypedData = (ethersSigner as any).signTypedData.bind(ethersSigner);
+    }
+    const sigType = proxyWallet.toLowerCase() === address.toLowerCase() ? 0 : 2;
+
+    return new ClobClient(
+      "https://clob.polymarket.com",
+      137,
+      ethersSigner as any,
+      apiCreds,
+      sigType, // 0 for EOA, 2 for GNOSIS_SAFE
+      proxyWallet // Funder address
+    );
+  }, [address, signer, apiCreds, proxyWallet]);
 
   return {
-    credentials,
-    hasCredentials: !!credentials,
-    isDerivingKey,
-    error,
-    deriveAPIKey,
-    clearCredentials,
+    // New exact names
+    proxyWallet,
+    apiCreds,
+    isL2Connected,
+    isLoading,
+    connectL2,
+    disconnectL2,
+    getClient,
+    loadProxyWallet,
+
+    // Backwards compatibility with previous hook implementations
+    credentials: apiCreds,
+    hasCredentials: isL2Connected,
+    isDerivingKey: isLoading,
+    deriveAPIKey: async () => {
+      try {
+        await connectL2();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    error: null as string | null
   };
 }

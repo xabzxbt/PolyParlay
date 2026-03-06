@@ -28,13 +28,6 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    // Save to Supabase if available
-    try {
-      const { supabase } = await import("@/lib/supabase/client");
-      await supabase.from("shared_parlays").insert(shareData);
-    } catch {
-      // Supabase save is non-blocking — share link still works via OG route
-    }
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://polyparlay.app";
 
     return NextResponse.json({
